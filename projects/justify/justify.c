@@ -9,6 +9,12 @@ int main(int argc, char *argv[])
     change the default line width if it was specified
     */
     char *buffer = malloc(line_width * sizeof(char));
+    if (buffer == NULL)
+    {
+        fprintf(stderr, "Error: malloc failed\n");
+        exit(1);
+    }
+
     /*
     while(true) {
         read a word
