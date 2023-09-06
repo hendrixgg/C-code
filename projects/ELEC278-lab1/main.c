@@ -31,7 +31,8 @@ int array_average(const int *array, size_t count)
 int main()
 {
     // construct an array, call 'array_average' on it, and print the result.
-    const int array[] = {1, 2, 3, 4, 5};
+    // 32 total sum, 5 numbers in the sum, 32/5 = 6.4
+    const int array[] = {1, 2, 20, 4, 5};
     printf("Average: %d\n", array_average(array, SIZE_(array)));
     printf("Max: %d\n", array_max(array, SIZE_(array)));
     printf("Hello, World!\n");
