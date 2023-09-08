@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#define SIZE_(array) (sizeof(array) / sizeof(*array))
+
 // Always '0' through '9'.
 typedef char digit;
 
@@ -82,15 +84,15 @@ int main()
   };
 
   // print out the contents of the form.
-  printf("SIN: %u\n", numeric_to_int(my_tax_info.sin, 9));
+  printf("SIN: %u\n", numeric_to_int(my_tax_info.sin, SIZE_(my_tax_info.sin)));
   printf("Date of birth: %d-%d-%d\n",
-         numeric_to_int(my_tax_info.date_of_birth.year, 4),
-         numeric_to_int(my_tax_info.date_of_birth.month, 2),
-         numeric_to_int(my_tax_info.date_of_birth.day, 2));
+         numeric_to_int(my_tax_info.date_of_birth.year, SIZE_(my_tax_info.date_of_birth.year)),
+         numeric_to_int(my_tax_info.date_of_birth.month, SIZE_(my_tax_info.date_of_birth.month)),
+         numeric_to_int(my_tax_info.date_of_birth.day, SIZE_(my_tax_info.date_of_birth.day)));
   printf("Date of death: %d-%d-%d\n",
-         numeric_to_int(my_tax_info.date_of_death.year, 4),
-         numeric_to_int(my_tax_info.date_of_death.month, 2),
-         numeric_to_int(my_tax_info.date_of_death.day, 2));
+         numeric_to_int(my_tax_info.date_of_death.year, SIZE_(my_tax_info.date_of_death.year)),
+         numeric_to_int(my_tax_info.date_of_death.month, SIZE_(my_tax_info.date_of_death.month)),
+         numeric_to_int(my_tax_info.date_of_death.day, SIZE_(my_tax_info.date_of_death.day)));
   printf("Marital status: %s\n", marital_to_string(my_tax_info.marital_status));
 
   return 0;

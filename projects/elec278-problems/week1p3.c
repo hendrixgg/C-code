@@ -57,7 +57,6 @@ bool remove_front(list *nums, int *out)
 // false (and leaves 'out' unmodified) if the list is empty.
 bool remove_back(list *nums, int *out)
 {
-  // TODO: implement this.
   if (*nums == NULL)
     return false;
 
