@@ -12,7 +12,8 @@ int main(int argc, char *argv[])
     if (buffer == NULL)
     {
         fprintf(stderr, "Error: malloc failed\n");
-        exit(1);
+        free(buffer);
+        return 1;
     }
 
     /*
@@ -31,4 +32,5 @@ int main(int argc, char *argv[])
     }
     see page 386 from book
     */
+    free(buffer);
 }
