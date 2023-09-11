@@ -10,7 +10,7 @@
 # Cmake Build Folders
 build/
 
-# Competetive Programming Helper Extension Stuff
+# Competetive Programming Helper Extension
 .cph/
 
 # Linker output
