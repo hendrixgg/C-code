@@ -1,0 +1,96 @@
+#include <stdio.h>
+#include <inttypes.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include "rps_constants.h"
+
+#include "strategies.h"
+
+#define NUM_GAMES 1000000ULL
+
+enum GAME_RESULT get_result(enum RPS_CHOICE your_choice, enum RPS_CHOICE opponent_choice)
+{
+    return (enum GAME_RESULT)(-(your_choice == opponent_choice) + (your_choice == winning_choice_against[opponent_choice]));
+}
+
+// results = {player1_win%, player2_win%, tie%}
+void run_simulation(size_t num_games, size_t num_rounds, size_t strategy_player1, size_t strategy_player2, float results[3])
+{
+    srand(time(NULL));
+    enum RPS_CHOICE player1[GAME_LENGTH], player2[GAME_LENGTH];
+    enum GAME_RESULT player1_results[GAME_LENGTH], player2_results[GAME_LENGTH];
+    size_t player1_wins = 0, player2_wins = 0, num_ties = 0;
+    for (size_t game_num = 0; game_num < num_games; game_num++)
+    {
+        // printf("game %ld:\n", game_num);
+        // number of wins this round
+        size_t player1_round_wins = 0, player2_round_wins = 0;
+        for (size_t round_num = 0; round_num < num_rounds; round_num++)
+        {
+            // get the moves
+            player1[round_num] = strategy_play(strategy_player1, round_num, player1, player2, player1_results);
+            player2[round_num] = strategy_play(strategy_player2, round_num, player2, player1, player2_results);
+            // printf("round %ld: p1: %s, p2: %s\n", round_num, RPS_CHOICE_to_str[player1[round_num]], RPS_CHOICE_to_str[player2[round_num]]);
+
+            // calculate win/loss
+            player1_results[round_num] = get_result(player1[round_num], player2[round_num]);
+            player2_results[round_num] = get_result(player2[round_num], player1[round_num]);
+
+            // increment win/loss for the game
+            player1_round_wins += player1_results[round_num] == WIN;
+            player2_round_wins += player2_results[round_num] == WIN;
+        }
+        // printf("p1 round wins: %ld\n", player1_round_wins);
+        // printf("p2 round wins: %ld\n", player2_round_wins);
+        // increment win/loss for the total simulation
+        player1_wins += player1_round_wins > player2_round_wins;
+        player2_wins += player2_round_wins > player1_round_wins;
+        num_ties += player1_round_wins == player2_round_wins;
+    }
+    // printf("total games: %u\n", num_games);
+    // printf("player1 wins: %u\n", player1_wins);
+    // printf("player2 wins: %u\n", player2_wins);
+    // printf("ties: %u\n", num_ties);
+
+    results[0] = player1_wins * 100.0 / num_games;
+    results[1] = player2_wins * 100.0 / num_games;
+    results[2] = num_ties * 100.0 / num_games;
+}
+
+void simulate_all_strategies()
+{
+    float sim_results[NUM_STRATEGIES][NUM_STRATEGIES][3];
+    // run the games
+    for (size_t i = 0; i < NUM_STRATEGIES; i++)
+    {
+        for (size_t j = 0; j < NUM_STRATEGIES; j++)
+        {
+            run_simulation(NUM_GAMES, GAME_LENGTH, i, j, sim_results[i][j]);
+        }
+    }
+
+    // print the results
+    FILE *results_file = fopen("results.csv", "w");
+    for (size_t i = 0; i < NUM_STRATEGIES; i++)
+    {
+        for (size_t j = 0; j < NUM_STRATEGIES; j++)
+        {
+            // fprintf(results_file, "\"%.0f, %.0f, %.0f\",", sim_results[i][j][0], sim_results[i][j][1], sim_results[i][j][2]);
+            fprintf(results_file, "\"%.0f, %.0f\",", sim_results[i][j][0], sim_results[i][j][2]);
+            // printf("\"%.0f, %.0f, %.0f\",", sim_results[i][j][0], sim_results[i][j][1], sim_results[i][j][2]);
+            // printf("\"%.0f, %.0f\",", sim_results[i][j][0], sim_results[i][j][2]);
+        }
+        // fprintf(results_file, "\n");
+        printf("\n");
+    }
+    fclose(results_file);
+}
+
+int main()
+{
+
+    (void)simulate_all_strategies();
+    return 0;
+}
