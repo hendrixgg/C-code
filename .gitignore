@@ -7,9 +7,6 @@
 *.obj
 *.elf
 
-# Build Folders
-build/
-
 # Cmake Build Folders
 build/
 
