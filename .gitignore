@@ -10,6 +10,9 @@
 # Cmake Build Folders
 build/
 
+# Competetive Programming Helper Extension Stuff
+.cph/
+
 # Linker output
 *.ilk
 *.map
