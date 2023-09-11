@@ -10,6 +10,12 @@
 # Build Folders
 build/
 
+# Cmake Build Folders
+build/
+
+# Competetive Programming Helper Extension
+.cph/
+
 # Linker output
 *.ilk
 *.map
