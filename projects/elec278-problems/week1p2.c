@@ -35,7 +35,7 @@ struct tax_info
     enum marital marital_status;
 };
 
-unsigned int numeric_to_int(digit *numeric, int length)
+size_t numeric_to_int(const digit *numeric, int length)
 {
     unsigned int result = 0;
     for (size_t i = 0; i < length; i++)
@@ -43,6 +43,21 @@ unsigned int numeric_to_int(digit *numeric, int length)
         result = result * 10 + numeric[i];
     }
     return result;
+}
+
+const char *parse_date(const struct numeric_date *date)
+{
+    // check if date is blank
+    if (date->day[0] == 0 && date->day[1] == 0)
+    {
+        return "BLANK";
+    }
+    static char date_string[11];
+    sprintf(date_string, "%u-%u-%u",
+            numeric_to_int(date->year, SIZE_(date->year)),
+            numeric_to_int(date->month, SIZE_(date->month)),
+            numeric_to_int(date->day, SIZE_(date->day)));
+    return date_string;
 }
 
 char *marital_to_string(enum marital status)
@@ -85,14 +100,8 @@ int main()
 
     // print out the contents of the form.
     printf("SIN: %u\n", numeric_to_int(my_tax_info.sin, SIZE_(my_tax_info.sin)));
-    printf("Date of birth: %d-%d-%d\n",
-           numeric_to_int(my_tax_info.date_of_birth.year, SIZE_(my_tax_info.date_of_birth.year)),
-           numeric_to_int(my_tax_info.date_of_birth.month, SIZE_(my_tax_info.date_of_birth.month)),
-           numeric_to_int(my_tax_info.date_of_birth.day, SIZE_(my_tax_info.date_of_birth.day)));
-    printf("Date of death: %d-%d-%d\n",
-           numeric_to_int(my_tax_info.date_of_death.year, SIZE_(my_tax_info.date_of_death.year)),
-           numeric_to_int(my_tax_info.date_of_death.month, SIZE_(my_tax_info.date_of_death.month)),
-           numeric_to_int(my_tax_info.date_of_death.day, SIZE_(my_tax_info.date_of_death.day)));
+    printf("Date of birth: %s\n", parse_date(&my_tax_info.date_of_birth));
+    printf("Date of birth: %s\n", parse_date(&my_tax_info.date_of_death));
     printf("Marital status: %s\n", marital_to_string(my_tax_info.marital_status));
 
     return 0;

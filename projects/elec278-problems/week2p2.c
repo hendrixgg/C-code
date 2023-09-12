@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 // Null for an empty list.
 typedef struct list_node *list;
@@ -29,6 +30,7 @@ void insert_at(iterator iter, int num)
 // Returns false if the iterator is at the end of the list.
 bool remove_at(iterator iter)
 {
+    assert(iter != NULL);
     // Make sure we are not at the end.
     if (*iter == NULL)
         return false;
@@ -43,6 +45,7 @@ bool remove_at(iterator iter)
 // Checks whether the iterator is at the end of the list.
 bool at_end(iterator iter)
 {
+    assert(iter != NULL);
     return *iter == NULL;
 }
 
@@ -50,6 +53,7 @@ bool at_end(iterator iter)
 // Only valid if !at_end(iter).
 int get(iterator iter)
 {
+    assert(iter != NULL);
     return (*iter)->value;
 }
 
@@ -57,9 +61,11 @@ int get(iterator iter)
 // Returns false if the iterator is at the end of the list.
 bool next(iterator *iter)
 {
+    assert(iter != NULL);
     if (at_end(*iter))
         return false;
 
+    assert(**iter != NULL);
     *iter = &(**iter)->tail;
     return true;
 }
@@ -68,6 +74,7 @@ bool next(iterator *iter)
 // Returns false if the end of the list is reached.
 bool find(iterator *iter, int target)
 {
+    assert(iter != NULL);
     // Loop which exists when it tries to advance past the end.
     for (; !at_end(*iter); next(iter))
     {
