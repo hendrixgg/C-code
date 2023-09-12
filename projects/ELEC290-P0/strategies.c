@@ -4,7 +4,7 @@
 
 #include "rps_constants.h"
 
-enum RPS_CHOICE rock_always(
+enum RPS_CHOICE always_rock(
     size_t round,
     enum RPS_CHOICE your_choices[GAME_LENGTH],
     enum RPS_CHOICE opponent_choices[GAME_LENGTH],
@@ -13,7 +13,7 @@ enum RPS_CHOICE rock_always(
     return ROCK;
 }
 
-enum RPS_CHOICE paper_always(
+enum RPS_CHOICE always_paper(
     size_t round,
     enum RPS_CHOICE your_choices[GAME_LENGTH],
     enum RPS_CHOICE opponent_choices[GAME_LENGTH],
@@ -22,7 +22,7 @@ enum RPS_CHOICE paper_always(
     return PAPER;
 }
 
-enum RPS_CHOICE scissors_always(
+enum RPS_CHOICE always_scissors(
     size_t round,
     enum RPS_CHOICE your_choices[GAME_LENGTH],
     enum RPS_CHOICE opponent_choices[GAME_LENGTH],
@@ -133,13 +133,13 @@ enum RPS_CHOICE strategy_play(
     switch (strategy_num)
     {
     case 0:
-        return rock_always(round, your_choices, opponent_choices, results);
+        return always_rock(round, your_choices, opponent_choices, results);
         break;
     case 1:
-        return paper_always(round, your_choices, opponent_choices, results);
+        return always_paper(round, your_choices, opponent_choices, results);
         break;
     case 2:
-        return scissors_always(round, your_choices, opponent_choices, results);
+        return always_scissors(round, your_choices, opponent_choices, results);
         break;
     case 3:
         return random_choice(round, your_choices, opponent_choices, results);
