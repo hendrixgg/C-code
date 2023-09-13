@@ -1,7 +1,4 @@
-#ifndef STRATEGIES
-#define STRATEGIES
-
-#include <inttypes.h>
+#pragma once
 
 #include "rps_constants.h"
 
@@ -10,8 +7,7 @@
 enum RPS_CHOICE strategy_play(
     size_t strat_num,
     size_t round,
-    enum RPS_CHOICE your_choices[GAME_LENGTH],
-    enum RPS_CHOICE opponent_choices[GAME_LENGTH],
-    enum GAME_RESULT results[GAME_LENGTH]);
-
-#endif
+    size_t game_length,
+    enum RPS_CHOICE *your_choices,
+    enum RPS_CHOICE *opponent_choices,
+    enum GAME_RESULT *results);
