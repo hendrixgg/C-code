@@ -1,8 +1,6 @@
 #ifndef RPS_CONSTANTS
 #define RPS_CONSTANTS
 
-#define GAME_LENGTH 7ULL
-
 enum RPS_CHOICE
 {
     ROCK = 0,
