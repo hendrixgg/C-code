@@ -58,7 +58,7 @@ bool remove_front(list *nums, int *out)
 bool remove_back(list *nums, int *out)
 {
     // check for error cases
-    if (nums == NULL && *nums == NULL)
+    if (nums == NULL || *nums == NULL)
         return false;
 
     // remove front if there is only one element in the list
