@@ -81,12 +81,19 @@ enum RPS_CHOICE lose_switch_to_what_would_have_won_win_copy_opponent(
     if (round == 0)
         return (enum RPS_CHOICE)(rand() % 3);
 
-    // Switch to what would have won.
-    if (results[round - 1] == LOSS)
-        return winning_choice_against[opponent_choices[round - 1]];
-
+    // switch case over the results of last round.
+    switch (results[round - 1])
+    {
     // Copy what the opponent did if you won or tied.
-    return opponent_choices[round - 1];
+    case WIN:
+    case TIE:
+        return opponent_choices[round - 1];
+        break;
+    // Switch to what would have won.
+    case LOSS:
+        return winning_choice_against[opponent_choices[round - 1]];
+        break;
+    }
 }
 
 // // Same as the 4th Strategy in the word document "Utilizing Adaptive Strategies".
