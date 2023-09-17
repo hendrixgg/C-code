@@ -8,7 +8,7 @@
 
 #include "strategies.h"
 
-#define NUM_GAMES 1000000ULL
+#define NUM_GAMES 10000000ULL
 #define GAME_LENGTH 7ULL
 
 enum GAME_RESULT get_result(enum RPS_CHOICE your_choice, enum RPS_CHOICE opponent_choice)
@@ -30,8 +30,8 @@ void run_simulation(size_t num_games, size_t num_rounds, size_t strategy_player1
         for (size_t round_num = 0; round_num < num_rounds; round_num++)
         {
             // get the moves
-            player1[round_num] = strategy_play(strategy_player1, num_rounds, round_num, player1, player2, player1_results);
-            player2[round_num] = strategy_play(strategy_player2, num_rounds, round_num, player2, player1, player2_results);
+            player1[round_num] = strategy_play(strategy_player1, round_num, num_rounds, player1, player2, player1_results);
+            player2[round_num] = strategy_play(strategy_player2, round_num, num_rounds, player2, player1, player2_results);
 
             // calculate win/loss
             player1_results[round_num] = get_result(player1[round_num], player2[round_num]);

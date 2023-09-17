@@ -42,8 +42,6 @@ enum RPS_CHOICE random_choice(
     enum RPS_CHOICE *opponent_choices,
     enum GAME_RESULT *results)
 {
-    // TODO: Implement "Draw Lock"
-
     return (enum RPS_CHOICE)(rand() % 3);
 }
 
@@ -65,7 +63,7 @@ enum RPS_CHOICE win_stay_lose_switch(
     if (results[round - 1] == WIN)
         return your_choices[round - 1];
 
-    // random between the other two if you lost
+    // random between the other two moves if you lost or tied
     int rand_val = rand() % 2;
     int rand_diff = -(rand_val == 0) + (rand_val == 1);
     return (enum RPS_CHOICE)((your_choices[round - 1] + rand_diff) % 3);
@@ -79,8 +77,6 @@ enum RPS_CHOICE lose_switch_to_what_would_have_won_win_copy_opponent(
     enum RPS_CHOICE *opponent_choices,
     enum GAME_RESULT *results)
 {
-    // TODO: Implement "Draw Lock".
-
     // Randomize the first move.
     if (round == 0)
         return (enum RPS_CHOICE)(rand() % 3);
@@ -89,45 +85,82 @@ enum RPS_CHOICE lose_switch_to_what_would_have_won_win_copy_opponent(
     if (results[round - 1] == LOSS)
         return winning_choice_against[opponent_choices[round - 1]];
 
-    // Copy what the opponent did if you won.
+    // Copy what the opponent did if you won or tied.
     return opponent_choices[round - 1];
 }
 
-// Same as the 4th Strategy in the word document "Utilizing Adaptive Strategies".
-enum RPS_CHOICE adaptive_strategy(
+// // Same as the 4th Strategy in the word document "Utilizing Adaptive Strategies".
+enum RPS_CHOICE frequency_exploit(
     size_t round,
     size_t game_length,
     enum RPS_CHOICE *your_choices,
     enum RPS_CHOICE *opponent_choices,
     enum GAME_RESULT *results)
 {
-    // TODO: Implement this
-    // TODO: Implement "Draw Lock."
-
     // randomize the first move
     if (round == 0)
         return (enum RPS_CHOICE)(rand() % 3);
 
-    return (enum RPS_CHOICE)(rand() % 3);
+    enum RPS_CHOICE most_frequent_move = ROCK;
+    // switch case over the results of last round.
+    switch (results[round - 1])
+    {
+    // If the last round was a win, play what would have beat your move.
+    case WIN:
+        return winning_choice_against[your_choices[round - 1]];
+        break;
+    // Play what would beat your opponent in the case of a draw.
+    case TIE:
+        return losing_choice_against[your_choices[round - 1]];
+        break;
+    // If the last round was a loss, pick the move that would beat your opponent's most frequently played move.
+    case LOSS:
+        // calculate opponents most frequent move
+        for (size_t i = 0, count_moves[3] = {0, 0, 0}, high_count = 0; i < round; i++)
+        {
+            count_moves[opponent_choices[i]]++;
+            if (count_moves[opponent_choices[i]] > high_count)
+            {
+                most_frequent_move = opponent_choices[i];
+                high_count = count_moves[opponent_choices[i]];
+            }
+        }
+        return winning_choice_against[most_frequent_move];
+        break;
+    }
 }
 
-// Same as the 5th strategy in the word document "Win Situation".
-enum RPS_CHOICE win_situation_strategy(
+// This is the strategy that Semyon implemented.
+enum RPS_CHOICE semyon_strategy(
     size_t round,
     size_t game_length,
     enum RPS_CHOICE *your_choices,
     enum RPS_CHOICE *opponent_choices,
     enum GAME_RESULT *results)
 {
-    // TODO: Implement this
-    // TODO: Implement "Draw Lock."
-
     // randomize the first move
     if (round == 0)
         return (enum RPS_CHOICE)(rand() % 3);
 
-    // leaving this as random for now
-    return (enum RPS_CHOICE)(rand() % 3);
+    switch (results[round - 1])
+    {
+    // If you won/lost:
+    case WIN:
+    case LOSS:
+        // If you played the same symbol last time: randomly pick one of the other moves.
+        if (round >= 2 && your_choices[round - 2] == your_choices[round - 1])
+        {
+            int rand_val = rand() % 2;
+            int rand_diff = -(rand_val == 0) + (rand_val == 1);
+            return (enum RPS_CHOICE)((your_choices[round - 1] + rand_diff) % 3);
+        }
+        // If you played a different symbol last time: 50% chance to stay on the same choice, 50% chance to switch to what would beat your previous choice.
+        return rand() % 2 == 0 ? your_choices[round - 1] : winning_choice_against[your_choices[round - 1]];
+        break;
+    case TIE:
+        return losing_choice_against[your_choices[round - 1]];
+        break;
+    }
 }
 
 // implements all the strategies. Accessible by their strategy_num from 0-7.
@@ -160,10 +193,10 @@ enum RPS_CHOICE strategy_play(
         return lose_switch_to_what_would_have_won_win_copy_opponent(round, game_length, your_choices, opponent_choices, results);
         break;
     case 6:
-        return adaptive_strategy(round, game_length, your_choices, opponent_choices, results);
+        return frequency_exploit(round, game_length, your_choices, opponent_choices, results);
         break;
     case 7:
-        return win_situation_strategy(round, game_length, your_choices, opponent_choices, results);
+        return semyon_strategy(round, game_length, your_choices, opponent_choices, results);
         break;
     default:
         // This should not happen.

@@ -2,7 +2,7 @@
 
 #include "rps_constants.h"
 
-#define NUM_STRATEGIES 6ULL
+#define NUM_STRATEGIES 8ULL
 
 enum RPS_CHOICE strategy_play(
     size_t strat_num,
