@@ -57,24 +57,20 @@ bool remove_front(list *nums, int *out)
 // false (and leaves 'out' unmodified) if the list is empty.
 bool remove_back(list *nums, int *out)
 {
+    assert(nums != NULL);
     // check for error cases
-    if (nums == NULL || *nums == NULL)
+    if (*nums == NULL)
         return false;
 
-    // remove front if there is only one element in the list
-    if ((*nums)->tail == NULL)
-        return remove_front(nums, out);
-
-    // Traverse the list until we get to one before the end of the list.
-    while ((*nums)->tail->tail != NULL)
+    // Traverse the list until we get to the end.
+    while ((*nums)->tail != NULL)
         nums = &(*nums)->tail;
 
     // Extract the back value
-    *out = (*nums)->tail->value;
-
+    *out = (*nums)->value;
     // Remove the last node
-    (*nums)->tail = NULL;
-    free((*nums)->tail);
+    free(*nums);
+    (*nums) = NULL;
     return true;
 }
 
