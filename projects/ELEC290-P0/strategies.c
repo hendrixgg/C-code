@@ -64,9 +64,7 @@ enum RPS_CHOICE win_stay_lose_switch(
         return your_choices[round - 1];
 
     // random between the other two moves if you lost or tied
-    int rand_val = rand() % 2;
-    int rand_diff = -(rand_val == 0) + (rand_val == 1);
-    return (enum RPS_CHOICE)((your_choices[round - 1] + rand_diff) % 3);
+    return (enum RPS_CHOICE)((your_choices[round - 1] + (rand() % 2 == 0 ? -1 : 1)) % 3);
 }
 
 // Same as strategy #2 in the word document "Exploiting Predictable Irrationality".
@@ -108,6 +106,7 @@ enum RPS_CHOICE frequency_exploit(
     if (round == 0)
         return (enum RPS_CHOICE)(rand() % 3);
 
+    // To be used when there was a loss.
     enum RPS_CHOICE most_frequent_move = ROCK;
     // switch case over the results of last round.
     switch (results[round - 1])
@@ -154,17 +153,17 @@ enum RPS_CHOICE semyon_strategy(
     // If you won/lost:
     case WIN:
     case LOSS:
-        // If you played the same symbol last time: randomly pick one of the other moves.
+        // If you played the same symbol twice in a row: randomly pick one of the other moves.
         if (round >= 2 && your_choices[round - 2] == your_choices[round - 1])
-        {
-            int rand_val = rand() % 2;
-            int rand_diff = -(rand_val == 0) + (rand_val == 1);
-            return (enum RPS_CHOICE)((your_choices[round - 1] + rand_diff) % 3);
-        }
-        // If you played a different symbol last time: 50% chance to stay on the same choice, 50% chance to switch to what would beat your previous choice.
-        return rand() % 2 == 0 ? your_choices[round - 1] : winning_choice_against[your_choices[round - 1]];
+            return (enum RPS_CHOICE)((your_choices[round - 1] + (rand() % 2 ? -1 : 1)) % 3);
+        // If you played a different symbol the last two moves: 50% chance to stay on the same choice, 50% chance to switch to what would beat your previous choice.
+        return rand() % 2 ? your_choices[round - 1] : winning_choice_against[your_choices[round - 1]];
         break;
     case TIE:
+        // if there are 2 draws in a row do a random move to break the pattern
+        if (round >= 2 && results[round - 2] == results[round - 1])
+            return (enum RPS_CHOICE)(rand() % 3);
+        // going in the reverse order of RPS
         return losing_choice_against[your_choices[round - 1]];
         break;
     }
