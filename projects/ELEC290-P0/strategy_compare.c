@@ -8,16 +8,16 @@
 
 #include "strategies.h"
 
-#define NUM_GAMES 10000000ULL
+#define NUM_GAMES 1000000ULL
 #define GAME_LENGTH 7ULL
 
-enum GAME_RESULT get_result(enum RPS_CHOICE your_choice, enum RPS_CHOICE opponent_choice)
+enum GAME_RESULT get_result(const enum RPS_CHOICE your_choice, const enum RPS_CHOICE opponent_choice)
 {
     return (enum GAME_RESULT)(-(your_choice == opponent_choice) + (your_choice == winning_choice_against[opponent_choice]));
 }
 
 // results = {player1_win%, player2_win%, tie%}
-void run_simulation(size_t num_games, size_t num_rounds, size_t strategy_player1, size_t strategy_player2, float results[3])
+void run_simulation(const size_t num_games, const size_t num_rounds, const size_t strategy_player1, const size_t strategy_player2, float results[3])
 {
     srand(time(NULL));
     enum RPS_CHOICE player1[num_rounds], player2[num_rounds];
@@ -54,7 +54,7 @@ void run_simulation(size_t num_games, size_t num_rounds, size_t strategy_player1
     results[2] = num_ties * 100.0 / num_games;
 }
 
-void simulate_all_strategies(size_t num_strategies, size_t num_games, size_t num_rounds_per_game)
+void simulate_all_strategies(const size_t num_strategies, const size_t num_games, const size_t num_rounds_per_game)
 {
     float sim_results[num_strategies][num_strategies][3];
     // run the games
