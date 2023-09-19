@@ -96,6 +96,7 @@ void reverse(list *nums)
 
     list previous = NULL, tail;
 
+    // loop until you have gone over the entire list
     while (*nums != NULL)
     {
         // Grabbing the tail of the current node.
