@@ -79,10 +79,13 @@ void print_list(list nums)
 
     // Check if the list is empty.
     if (at_end(iter))
+    {
         printf("<empty list>");
+        return;
+    }
 
     // Loop through the list and print each value.
-    while (!at_end(iter) && !at_end(&(*iter)->tail))
+    while (!at_end(&(*iter)->tail))
     {
         printf("%d, ", get(iter));
         next(&iter);
