@@ -168,7 +168,7 @@ int main()
     // could also use an array and a loop
     const int nums[] = {1, 2, 3, 3, 4, 5, 6};
     struct list_node **last_node = &numbers;
-    for (size_t i = 0; i < 7; i++)
+    for (size_t i = 0; i < sizeof(nums) / sizeof(*nums); i++)
     {
         insert_at(last_node, nums[i]);
         next(&last_node);
