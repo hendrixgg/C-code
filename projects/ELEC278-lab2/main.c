@@ -157,13 +157,22 @@ int main()
     list numbers = NULL;
 
     // construct a linked list containing the items 1, 2, 3, 3, 4, 5, 6
-    insert_at(&numbers, 6);
-    insert_at(&numbers, 5);
-    insert_at(&numbers, 4);
-    insert_at(&numbers, 3);
-    insert_at(&numbers, 3);
-    insert_at(&numbers, 2);
-    insert_at(&numbers, 1);
+    // insert_at(&numbers, 6);
+    // insert_at(&numbers, 5);
+    // insert_at(&numbers, 4);
+    // insert_at(&numbers, 3);
+    // insert_at(&numbers, 3);
+    // insert_at(&numbers, 2);
+    // insert_at(&numbers, 1);
+
+    // could also use an array and a loop
+    const int nums[] = {1, 2, 3, 3, 4, 5, 6};
+    struct list_node **last_node = &numbers;
+    for (size_t i = 0; i < 7; i++)
+    {
+        insert_at(last_node, nums[i]);
+        next(&last_node);
+    }
 
     printf("Original list: ");
     print_list(numbers);
