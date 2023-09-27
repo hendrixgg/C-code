@@ -41,9 +41,9 @@ Node *move_to_front(Node *head)
         q = p;
         p = p->next;
     }
-    q = NULL;
-    p->next = head;
-    head = p;
+    // q = NULL;
+    // p->next = head;
+    // head = p;
 
     // head = p;
     // p->next = q;
@@ -53,9 +53,9 @@ Node *move_to_front(Node *head)
     // head = p;
     // p->next = head;
 
-    // q->next = NULL;
-    // p->next = head;
-    // head = p;
+    q->next = NULL;
+    p->next = head;
+    head = p;
     return head;
 }
 
@@ -76,8 +76,9 @@ int main()
 
     printf("%d, %d, %d\n", n1.value, n1.next->value, n1.next->next->value);
 
-    move_to_front(&n1);
+    Node *head = &n1;
+    head = move_to_front(head);
 
-    printf("%d, %d, %d\n", n1.value, n1.next->value, n1.next->next->value);
+    printf("%d, %d, %d\n", head->value, head->next->value, head->next->next->value);
     return 0;
 }
