@@ -1,0 +1,2 @@
+This file (as you can see) has balanced
+brackets [of {all} types].
