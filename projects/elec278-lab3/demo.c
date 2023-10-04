@@ -7,7 +7,8 @@ bool check_brackets(const char *str)
     stack_ptr s = stack_new();
 
     // TODO (task 3): using the stack 's', check the brackets in the strings.
-    static const char brackets[7] = "([{)]}";
+    static const char brackets[7] = "()[]{}";
+
     while (*str != '\0')
     {
         // check for the next bracket.
@@ -19,7 +20,7 @@ bool check_brackets(const char *str)
         // check bracket type.
         int bracket_type = strchr(brackets, *bracket) - brackets;
         // if open bracket, add to the stack.
-        if (bracket_type < 3)
+        if ((bracket_type & 1) == 0)
         {
             stack_push(s, *bracket);
         }
@@ -36,7 +37,7 @@ bool check_brackets(const char *str)
             }
 
             // if brackets don't match, exit the loop with an unempty stack.
-            if (bracket_type != strchr(brackets, last_bracket) - brackets + 3)
+            if (bracket_type != strchr(brackets, last_bracket) - brackets + 1)
             {
                 stack_push(s, 'a');
                 break;
