@@ -33,15 +33,10 @@ void stack_push(stack_ptr s, char c)
     // TODO (task 2): how do we push an entry onto the stack?
     assert(s != NULL);
     // Check if already at capacity, allocate more memory if needed.
-    if (s->capacity == 0)
-    {
-        s->data = malloc(sizeof(*s->data));
-        s->capacity = 1;
-    }
-    else if (s->length == s->capacity)
+    if (s->length == s->capacity)
     {
         // double the capacity
-        s->capacity <<= 1;
+        s->capacity = s->capacity == 0 ? 1 : s->capacity << 1;
         // call realloc to store the larger amount of memory.
         s->data = realloc(s->data, s->capacity * (sizeof(*s->data)));
     }
