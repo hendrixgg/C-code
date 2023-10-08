@@ -67,7 +67,7 @@ void unit_test_results_print(unit_test_results *results)
 {
     assert(results != NULL);
     uint64_t total_tests_passed = 0, total_runtime_ms = 0, max_runtime_test = 0, max_memory_usage_test = 0;
-    (void)printf("Unit Test Name: %s\n", results->name);
+    (void)printf("Testing Function: %s\n", results->name);
     // (void)printf("\tResults ('.' = pass, '!' = fail): ");
     (void)printf("\tResults: ");
     for (uint64_t i = 0; i < results->num_tests; i++)
@@ -94,7 +94,7 @@ void unit_test_results_print(unit_test_results *results)
 }
 
 #define FIB_MAT_EXP_NUM_TESTS 7
-#define FIB_MAT_EXP_UNIT_TEST_NAME "Fibonnaci Using Matrix Exponential (fib_mat_exp)"
+#define FIB_MAT_EXP_UNIT_TEST_NAME "uint64_t fib_mat_exp(uint64_t n);"
 unit_test_results *test_fib_mat_exp(unit_test_results *results)
 {
     const uint64_t num_tests = FIB_MAT_EXP_NUM_TESTS;
