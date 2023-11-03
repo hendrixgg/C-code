@@ -1,9 +1,11 @@
 #include <stdio.h>
+#include <assert.h>
 
 #define SIZE_(arr) (sizeof(arr) / sizeof(*arr))
 
 int array_max(const int *array, size_t count)
 {
+    assert(array != NULL && count >= 1);
     // return the maximum of the 'count' elements of 'array'.
     // will cause an error if the array is empty
     int max = array[0];
