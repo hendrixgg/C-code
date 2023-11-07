@@ -1,0 +1,17 @@
+ENQ(1);
+ENQ(2);
+ENQ(3);
+ENQ(4);
+ENQ(5);
+ENQ(6);
+x = DEQ;
+y = DEQ;
+ENQ(x);
+x = y;
+y = DEQ;
+ENQ(DEQ);
+ASSERT(DEQ = 5);
+ASSERT(DEQ = 6);
+ASSERT(DEQ = 1);
+ASSERT(DEQ = 4);
+ASSERT(EMPTY);

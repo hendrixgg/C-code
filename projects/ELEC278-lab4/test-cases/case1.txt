@@ -1,0 +1,4 @@
+x = 7;
+ENQ(x);
+ASSERT(DEQ = 7);
+ASSERT(x < 10);

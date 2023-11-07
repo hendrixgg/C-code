@@ -1,0 +1,6 @@
+x = 20;
+y = 10000;
+ENQ(y);
+ENQ(x);
+x = DEQ;
+y = DEQ;

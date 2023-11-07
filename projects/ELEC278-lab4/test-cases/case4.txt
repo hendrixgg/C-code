@@ -1,0 +1,10 @@
+x = 8;
+ENQ(1);
+ENQ(0);
+WHILE (0 < x) {
+    y = DEQ;
+    ENQ(y + DEQ);
+    ENQ(y);
+    x = x + -1;
+}
+ASSERT(y = 21);
