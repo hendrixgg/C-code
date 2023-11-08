@@ -53,6 +53,7 @@ bool dequeue(struct queue *q, int *out)
 
     // Extract the element to be removed
     *out = q->data[q->offset++];
+    q->offset -= (q->offset == q->capacity) * q->capacity;
     // normally: q->capacity / 4 < q->length <= q->capacity / 2
     // Decrease the capacity if q->length == q->capacity / 4.
     // Subtract one from the length to account for the element that was just removed.

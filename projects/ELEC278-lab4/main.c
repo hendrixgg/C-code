@@ -45,11 +45,11 @@ int main(int argc, char **argv)
         .pos = NULL,
         .desc = NULL,
         .test_output = fopen("../test_output.txt", "w"),
-        .test_input = fopen("../test-cases/case1.txt", "r"),
+        .test_input = fopen("../test-cases/case4.txt", "r"),
     };
 
-    // if (argc > 1)
-    if (false)
+    if (argc > 1)
+    // if (false)
     {
         // Read test data.
         FILE *file = fopen(argv[1], "r");
@@ -84,6 +84,7 @@ int main(int argc, char **argv)
         {
             printf("failure\n");
             print_err(data, err);
+            printf("x = %d\ny = %d\n", ctx.x, ctx.y);
         }
     }
     fprintf(err.test_output, "--- test ended ---\n");

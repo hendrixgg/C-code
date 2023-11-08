@@ -15,13 +15,48 @@ bool run_statements(struct context *ctx, const char **input, struct error *err)
     assert(err != NULL);
     // Skip the whitespace at the beginning of the input.
     skip_whitespace(input);
-
+    // Run each statement, if error, return false.
+    while (**input != '\0')
+    {
+        if (!run_statement(ctx, input, err))
+            return false;
+        // Skip the whitespace at the end of statement.
+        skip_whitespace(input);
+    }
     // Check if we are at a valid end of a sequence of statements, in which case, do nothing.
-    if (**input == '\0' || **input == '}')
-        return true;
+    return true;
+}
 
-    // Otherwise, run a single statement and then the rest of the statements.
-    return run_statement(ctx, input, err) && run_statements(ctx, input, err);
+bool function_arguments(struct context *ctx, const char **input, struct error *err, int *out)
+{
+    // Error if the function is not being called.
+    if (!starts_with(*input, tokens[TOKEN_CALL_BEGIN]))
+    {
+        err->pos = *input;
+        err->desc = "function_arguments: "
+                    "TOKEN_CALL_BEGIN not found";
+        return false;
+    }
+    // Increment past the call begin.
+    *input += strlen(tokens[TOKEN_CALL_BEGIN]);
+
+    // Evaluate expression. If it evaluation had an error, exit.
+    if (!eval_expression(ctx, input, err, out))
+        return false;
+    // Skip whitespace after expression.
+    skip_whitespace(input);
+
+    // Error if function call is not ended.
+    if (!starts_with(*input, tokens[TOKEN_CALL_END]))
+    {
+        err->pos = *input;
+        err->desc = "function_arguments: "
+                    "TOKEN_CALL_END not found";
+        return false;
+    }
+    // Advance past the TOKEN_CALL_END.
+    *input += strlen(tokens[TOKEN_CALL_END]);
+    return true;
 }
 
 bool run_statement(struct context *ctx, const char **input, struct error *err)
@@ -30,177 +65,173 @@ bool run_statement(struct context *ctx, const char **input, struct error *err)
     assert(input != NULL);
     assert(*input != NULL);
     assert(err != NULL);
-    // TODO: Task 2: implement enqueue, assert, and assignment statements.
-    int out;
-    // ENQ
-    if (starts_with(*input, tokens[TOKEN_ENQUEUE]))
+    // Store output from expressions, initially set to 1 so that the while loop iterates once at the start.
+    int out = 1;
+    // statement classification
+    TOKEN statement_token = TOKEN_WHILE * starts_with(*input, tokens[TOKEN_WHILE]) + TOKEN_ASSERT * starts_with(*input, tokens[TOKEN_ASSERT]) + TOKEN_ENQUEUE * starts_with(*input, tokens[TOKEN_ENQUEUE]) + TOKEN_X * starts_with(*input, tokens[TOKEN_X]) + TOKEN_Y * starts_with(*input, tokens[TOKEN_Y]);
+    // Should check if the next token is neither whitespace, nor TOKEN_CALL_BEGIN, nor TOKEN_ASSIGN. Using assert for now since this is not going to happen in general.
+    *input += strlen(tokens[statement_token]);
+    skip_whitespace(input);
+    assert(!isalnum(**input));
+
+    // Position after the token.
+    const char *after_token = *input;
+    switch (statement_token)
     {
-        // Increment input just past the token.
-        *input += strlen(tokens[TOKEN_ENQUEUE]);
+    // TODO: Task 2: implement enqueue, assert, and assignment statements.
+    case TOKEN_ASSERT:
+    case TOKEN_ENQUEUE:
+        // ENQ or ASSERT
         skip_whitespace(input);
 
-        // Error if the function is not being called.
-        if (!starts_with(*input, tokens[TOKEN_CALL_BEGIN]))
-        {
-            err->pos = *input;
-            err->desc = "run_statement->ENQUEUE: "
-                        "TOKEN_CALL_BEGIN not found";
+        // Evaluate single function argument.
+        if (!function_arguments(ctx, input, err, &out))
             return false;
-        }
-        // Increment past the call begin.
-        *input += strlen(tokens[TOKEN_CALL_BEGIN]);
-        skip_whitespace(input);
 
-        // ENQ specific
-        // Evaluate the argument. If it failed, exit.
-        if (!eval_expression(ctx, input, err, &out))
-            return false;
-        skip_whitespace(input);
-
-        // Error if function call is not ended.
-        if (!starts_with(*input, tokens[TOKEN_CALL_END]))
-        {
-            err->pos = *input;
-            err->desc = "run_statement->ENQUEUE: "
-                        "TOKEN_CALL_END not found";
-            return false;
-        }
-        // Increment past the close bracket.
-        *input += strlen(tokens[TOKEN_CALL_END]);
+        // Skip whitespace so that input lands on TOKEN_STATEMENT_END.
         skip_whitespace(input);
         // Error if there is no end statement
         if (!starts_with(*input, tokens[TOKEN_STATEMENT_END]))
         {
             err->pos = *input;
-            err->desc = "run_statement->ENQUEUE: "
+            err->desc = "run_statement: "
+                        "TOKEN_STATEMENT_END not found";
+            return false;
+        }
+        // Increment past the statement end.
+        *input += strlen(tokens[TOKEN_STATEMENT_END]);
+        // Execute function.
+        switch (statement_token)
+        {
+        case TOKEN_ASSERT:
+            // If expression was false, assign error and exit.
+            if (!out)
+            {
+                err->pos = *input;
+                err->desc = "Assertion failed.";
+                return false;
+            }
+            break;
+        case TOKEN_ENQUEUE:
+            // Enqueue the result from the expression.
+            enqueue(&ctx->q, out);
+            break;
+        default:
+            assert(false);
+        }
+        return true;
+        break;
+    // Potential variable assignment.
+    case TOKEN_X:
+    case TOKEN_Y:
+        // Error if there is no assignment operator.
+        if (!starts_with(*input, tokens[TOKEN_ASSIGN]))
+        {
+            err->pos = *input;
+            err->desc = "run_statement: "
+                        "TOKEN_ASSIGN not found";
+            return false;
+        }
+        // Increment past the assignment operator.
+        *input += strlen(tokens[TOKEN_ASSIGN]);
+
+        // Skip any whitespace before the expression.
+        skip_whitespace(input);
+        // Evaluate the value to be assigned. If if failed, exit.
+        if (!eval_expression(ctx, input, err, &out))
+            return false;
+
+        // Skip any whitespace before TOKEN_STATEMENT_END.
+        skip_whitespace(input);
+        // Error if there is no end statement
+        if (!starts_with(*input, tokens[TOKEN_STATEMENT_END]))
+        {
+            err->pos = *input;
+            err->desc = "run_statement: "
                         "TOKEN_STATEMENT_END not found";
             return false;
         }
         // increment past the statement end.
         *input += strlen(tokens[TOKEN_STATEMENT_END]);
-        skip_whitespace(input);
 
-        // Enqueue the result from the expression.
-        enqueue(&ctx->q, out);
+        // Variable assignment
+        switch (statement_token)
+        {
+        case TOKEN_X:
+            ctx->x = out;
+            break;
+        case TOKEN_Y:
+            ctx->y = out;
+            break;
+        default:
+            assert(false);
+        }
 
         return true;
-    }
-    // ASSERT
-    if (starts_with(*input, tokens[TOKEN_ASSERT]))
-    {
-        // Increment input just past the token.
-        *input += strlen(tokens[TOKEN_ASSERT]);
-        skip_whitespace(input);
-
-        // Error if the function is not being called.
-        if (!starts_with(*input, tokens[TOKEN_CALL_BEGIN]))
+    case TOKEN_WHILE:
+        // Task 3: implement loops.
+        // Loop if the condition is true.
+        while (out)
         {
-            err->pos = *input;
-            err->desc = "run_statement->ASSERT: "
-                        "TOKEN_CALL_BEGIN not found";
-            return false;
-        }
-        // Increment past the call begin.
-        *input += strlen(tokens[TOKEN_CALL_BEGIN]);
+            // Reset input to the point right after TOKEN_WHILE.
+            *input = after_token;
 
-        // Evaluate the argument. If it failed, exit.
-        if (!eval_expression(ctx, input, err, &out))
-            return false;
-        skip_whitespace(input);
+            // Evaluate loop condition.
+            if (!function_arguments(ctx, input, err, &out))
+                return false;
 
-        // Error if function call is not ended.
-        if (!starts_with(*input, tokens[TOKEN_CALL_END]))
-        {
-            err->pos = *input;
-            err->desc = "run_statement->ASSERT: "
-                        "TOKEN_CALL_END not found";
-            return false;
-        }
-        // Increment past the close bracket.
-        *input += strlen(tokens[TOKEN_CALL_END]);
-        skip_whitespace(input);
-        // Error if there is no end statement
-        if (!starts_with(*input, tokens[TOKEN_STATEMENT_END]))
-        {
-            err->pos = *input;
-            err->desc = "run_statement->ASSERT: "
-                        "TOKEN_STATEMENT_END not found";
-            return false;
-        }
-        // increment past the statement end.
-        *input += strlen(tokens[TOKEN_STATEMENT_END]);
+            // Skip whitespace after loop condition.
+            skip_whitespace(input);
+            // Check if the loop begins with an open brace. Need to remember to check for close brace at the end.
+            if (!starts_with(*input, tokens[TOKEN_WHILE_BEGIN]))
+            {
+            }
+            // Advance input to the start of the first statement.
+            *input += strlen(tokens[TOKEN_WHILE_BEGIN]);
+            skip_whitespace(input);
+            // Exit the loop if the condition was false.
+            if (!out)
+            {
+                const char *temp = strstr(*input, tokens[TOKEN_WHILE_END]);
+                // did not find TOKEN_WHILE_END
+                if (temp == NULL)
+                {
+                    err->pos = *input;
+                    err->desc = "run_statement: "
+                                "WHILE Loop missing closing bracket.";
+                    return false;
+                }
+                // Advance input past TOKEN_WHILE_END
+                *input = temp + 1;
+                // Exit the loop.
+                break;
+            }
+            // Would be nice if I could just skip over statements.
+            // Run Statements inside the loop. Exit once a statement returns false.
+            while (run_statement(ctx, input, err))
+            {
+                // Skip whitespace between statements.
+                skip_whitespace(input);
+            };
 
-        // If expression was true, so return true.
-        if (out)
-            return true;
-        // If expression was false, assign error and exit.
+            // Check if this is the end of the WHILE loop. If not, there was an error with run_statement.
+            if (!starts_with(*input, tokens[TOKEN_WHILE_END]))
+                return false;
+            // Clear the error.
+            err->pos = err->desc = NULL;
+            // Advance input past TOKEN_WHILE_END
+            *input += strlen(tokens[TOKEN_WHILE_END]);
+        }
+        // Return true if the while loop completed.
+        return true;
+        break;
+    default:
+        // Statement not recognized.
         err->pos = *input;
-        err->desc = "run_statement->ASSERT: "
-                    "Assertion failed";
+        err->desc = "run_statement: "
+                    "Statement not recognized.";
         return false;
     }
-    // Variable Assignment
-    for (TOKEN i = 0; i < num_variable_tokens; i++)
-    {
-        // If there is a matching variable.
-        if (starts_with(*input, tokens[i]))
-        {
-            // Advance input past the variable token.
-            *input += strlen(tokens[i]);
-            skip_whitespace(input);
-
-            // Error if there is no assignment operator.
-            if (!starts_with(*input, tokens[TOKEN_ASSIGN]))
-            {
-                err->pos = *input;
-                err->desc = "run_statement->Variable Assignment: "
-                            "TOKEN_ASSIGN not found";
-                return false;
-            }
-            // Increment past the assignment operator.
-            *input += strlen(tokens[TOKEN_ASSIGN]);
-            skip_whitespace(input);
-
-            // Evaluate the value to be assigned. If if failed, exit.
-            if (!eval_expression(ctx, input, err, &out))
-                return false;
-            skip_whitespace(input);
-
-            // Error if there is no end statement
-            if (!starts_with(*input, tokens[TOKEN_STATEMENT_END]))
-            {
-                err->pos = *input;
-                err->desc = "run_statement->ASSERT: "
-                            "TOKEN_STATEMENT_END not found";
-                return false;
-            }
-            // increment past the statement end.
-            *input += strlen(tokens[TOKEN_STATEMENT_END]);
-            skip_whitespace(input);
-            // Variable assignment
-            switch (i)
-            {
-            case TOKEN_X:
-                ctx->x = out;
-                break;
-            case TOKEN_Y:
-                ctx->y = out;
-                break;
-            default:
-                assert(false);
-            }
-
-            return true;
-        }
-    }
-
-    // TODO: Task 3: implement loops.
-    // if (starts_with(*input, tokens[TOKEN_WHILE]))
-    // {
-    // }
-
-    // Statement not recognized.
-    return false;
 }
 
 bool eval_expression(struct context *ctx, const char **input, struct error *err, int *out)
@@ -212,14 +243,13 @@ bool eval_expression(struct context *ctx, const char **input, struct error *err,
     assert(out != NULL);
     // True if there is a TOKEN_NOT.
     bool not = false;
-    // TODO: Task 3: implement not.
     if (not = starts_with(*input, tokens[TOKEN_NOT]))
         *input += strlen(tokens[TOKEN_NOT]);
 
     // DEQ
     if (starts_with(*input, tokens[TOKEN_DEQUEUE]))
     {
-        // Store the front element of the queue at *out. If failed, exit.
+        // Store the front element of the queue at out. If failed, exit.
         if (!dequeue(&ctx->q, out))
         {
             err->pos = *input;
@@ -249,7 +279,7 @@ bool eval_expression(struct context *ctx, const char **input, struct error *err,
         bool success = false;
         // variable token
         TOKEN var;
-        for (var = TOKEN_X; var < num_variable_tokens; var++)
+        for (var = TOKEN_X; var <= last_variable_token; var++)
         {
             if (success = starts_with(*input, tokens[var]))
             {

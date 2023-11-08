@@ -30,6 +30,7 @@ struct error
 
 // Stores the different tokens that can be found in a script.
 static const char *tokens[] = {
+    "",
     "x",
     "y",
     "DEQ",
@@ -47,35 +48,34 @@ static const char *tokens[] = {
     ")",
     "{",
     "}",
-    " =(",
 };
 
 // Enum for accessing tokens in the above array.
 typedef enum _TOKEN
 {
-    TOKEN_X = 0,
-    TOKEN_Y = 1,
-    TOKEN_DEQUEUE = 2,
-    TOKEN_EMPTY = 3,
-    TOKEN_ASSERT = 4,
-    TOKEN_ENQUEUE = 5,
-    TOKEN_WHILE = 6,
-    TOKEN_ASSIGN = 7,
-    TOKEN_ADD = 8,
-    TOKEN_EQUALS = 9,
-    TOKEN_LESS_THAN = 10,
-    TOKEN_NOT = 11,
-    TOKEN_STATEMENT_END = 12,
-    TOKEN_CALL_BEGIN = 13,
-    TOKEN_CALL_END = 14,
-    TOKEN_WHILE_BEGIN = 15,
-    TOKEN_WHILE_END = 16,
-    TOKEN_STATEMENT_SPLIT = 17,
+    TOKEN_INVALID = 0,
+    TOKEN_X = 1,
+    TOKEN_Y = 2,
+    TOKEN_DEQUEUE = 3,
+    TOKEN_EMPTY = 4,
+    TOKEN_ASSERT = 5,
+    TOKEN_ENQUEUE = 6,
+    TOKEN_WHILE = 7,
+    TOKEN_ASSIGN = 8,
+    TOKEN_ADD = 9,
+    TOKEN_EQUALS = 10,
+    TOKEN_LESS_THAN = 11,
+    TOKEN_NOT = 12,
+    TOKEN_STATEMENT_END = 13,
+    TOKEN_CALL_BEGIN = 14,
+    TOKEN_CALL_END = 15,
+    TOKEN_WHILE_BEGIN = 16,
+    TOKEN_WHILE_END = 17,
 } TOKEN;
 
-// Number of variable tokens.
-static const size_t num_variable_tokens = 2;
-// Bounds for binary operator tokens. binary operator tokens are located sequentially in the tokens array.
+// Range for variable tokens.
+static const size_t first_variable_token = TOKEN_X, last_variable_token = TOKEN_Y;
+// Range for binary operator tokens. binary operator tokens are located sequentially in the tokens array.
 static const TOKEN first_binary_operator = TOKEN_ADD, last_binary_operator = TOKEN_LESS_THAN;
 
 // Runs a sequence of statements, advancing '*input' to the end of the sequence.
