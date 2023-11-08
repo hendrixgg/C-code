@@ -27,13 +27,13 @@ bool run_statements(struct context *ctx, const char **input, struct error *err)
     return true;
 }
 
-bool function_arguments(struct context *ctx, const char **input, struct error *err, int *out)
+bool bracketed_expression(struct context *ctx, const char **input, struct error *err, int *out)
 {
     // Error if the function is not being called.
     if (!starts_with(*input, tokens[TOKEN_CALL_BEGIN]))
     {
         err->pos = *input;
-        err->desc = "function_arguments: "
+        err->desc = "bracketed_expression: "
                     "TOKEN_CALL_BEGIN not found";
         return false;
     }
@@ -50,7 +50,7 @@ bool function_arguments(struct context *ctx, const char **input, struct error *e
     if (!starts_with(*input, tokens[TOKEN_CALL_END]))
     {
         err->pos = *input;
-        err->desc = "function_arguments: "
+        err->desc = "bracketed_expression: "
                     "TOKEN_CALL_END not found";
         return false;
     }
@@ -85,7 +85,7 @@ bool run_statement(struct context *ctx, const char **input, struct error *err)
         skip_whitespace(input);
 
         // Evaluate single function argument.
-        if (!function_arguments(ctx, input, err, &out))
+        if (!bracketed_expression(ctx, input, err, &out))
             return false;
 
         // Skip whitespace so that input lands on TOKEN_STATEMENT_END.
@@ -177,7 +177,7 @@ bool run_statement(struct context *ctx, const char **input, struct error *err)
             *input = after_token;
 
             // Evaluate loop condition.
-            if (!function_arguments(ctx, input, err, &out))
+            if (!bracketed_expression(ctx, input, err, &out))
                 return false;
 
             // Skip whitespace after loop condition.
