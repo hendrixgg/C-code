@@ -78,7 +78,7 @@ bool run_statement(struct context *ctx, const char **input, struct error *err)
     const char *after_token = *input;
     switch (statement_token)
     {
-    // TODO: Task 2: implement enqueue, assert, and assignment statements.
+    // Task 2: implement enqueue, assert, and assignment statements.
     case TOKEN_ASSERT:
     case TOKEN_ENQUEUE:
         // ENQ or ASSERT
@@ -182,9 +182,13 @@ bool run_statement(struct context *ctx, const char **input, struct error *err)
 
             // Skip whitespace after loop condition.
             skip_whitespace(input);
-            // Check if the loop begins with an open brace. Need to remember to check for close brace at the end.
+            // If loop does not begin with TOKEN_WHILE_BEGIN, error.
             if (!starts_with(*input, tokens[TOKEN_WHILE_BEGIN]))
             {
+                err->pos = *input;
+                err->desc = "run_statement: "
+                            "WHILE loop missing open bracket.";
+                return false;
             }
             // Advance input to the start of the first statement.
             *input += strlen(tokens[TOKEN_WHILE_BEGIN]);
@@ -192,9 +196,23 @@ bool run_statement(struct context *ctx, const char **input, struct error *err)
             // Exit the loop if the condition was false.
             if (!out)
             {
-                const char *temp = strstr(*input, tokens[TOKEN_WHILE_END]);
-                // did not find TOKEN_WHILE_END
-                if (temp == NULL)
+                // Find where this while loop ends, accounting for nested loops.
+                const char *next_while_end = strstr(*input, tokens[TOKEN_WHILE_END]);
+                size_t num_nested_while = 0;
+                // Should really be checking for the next TOKEN_WHILE that is followed by either a whitespace, or a TOKEN_CALL_BEGIN.
+                for (const char *next_while = strstr(*input, tokens[TOKEN_WHILE]); next_while != NULL && next_while < next_while_end; next_while = strstr(next_while, tokens[TOKEN_WHILE]))
+                {
+                    num_nested_while++;
+                    next_while += strlen(tokens[TOKEN_WHILE]);
+                }
+                // Skip over (num_nested_while) TOKEN_WHILE_END.
+                for (size_t i = 0; next_while_end != NULL && i < num_nested_while; i++)
+                {
+                    next_while_end += strlen(tokens[TOKEN_WHILE_END]);
+                    next_while_end = strstr(next_while_end, tokens[TOKEN_WHILE_END]);
+                }
+                // Did not find matching TOKEN_WHILE_END.
+                if (next_while_end == NULL)
                 {
                     err->pos = *input;
                     err->desc = "run_statement: "
@@ -202,7 +220,7 @@ bool run_statement(struct context *ctx, const char **input, struct error *err)
                     return false;
                 }
                 // Advance input past TOKEN_WHILE_END
-                *input = temp + 1;
+                *input = next_while_end + strlen(tokens[TOKEN_WHILE_END]);
                 // Exit the loop.
                 break;
             }
@@ -243,12 +261,21 @@ bool eval_expression(struct context *ctx, const char **input, struct error *err,
     assert(out != NULL);
     // True if there is a TOKEN_NOT.
     bool not = false;
+    const char *not_pos = *input;
     if (not = starts_with(*input, tokens[TOKEN_NOT]))
         *input += strlen(tokens[TOKEN_NOT]);
 
     // DEQ
     if (starts_with(*input, tokens[TOKEN_DEQUEUE]))
     {
+        // Should not have a "not" for an expression.
+        if (not )
+        {
+            err->pos = not_pos;
+            err->desc = "eval_condition: "
+                        "Erronius TOKEN_NOT symbol in expression.";
+            return false;
+        }
         // Store the front element of the queue at out. If failed, exit.
         if (!dequeue(&ctx->q, out))
         {
@@ -268,6 +295,14 @@ bool eval_expression(struct context *ctx, const char **input, struct error *err,
     // constant (integer number) value
     else if ((starts_with(*input, "-") && isdigit(*(*input + 1))) || isdigit(**input))
     {
+        // Should not have a "not" for an expression.
+        if (not )
+        {
+            err->pos = not_pos;
+            err->desc = "eval_condition: "
+                        "Erronius TOKEN_NOT symbol in expression.";
+            return false;
+        }
         // Parse constant and store it at *out.
         if (!parse_integer(input, err, out))
             return false;
@@ -275,6 +310,14 @@ bool eval_expression(struct context *ctx, const char **input, struct error *err,
     // variable
     else
     {
+        // Should not have a Not for an expression.
+        if (not )
+        {
+            err->pos = not_pos;
+            err->desc = "eval_condition: "
+                        "Erronius ! symbol in expression";
+            return false;
+        }
         // True if reading a variable was successful. False otherwise
         bool success = false;
         // variable token
@@ -314,7 +357,11 @@ bool eval_expression(struct context *ctx, const char **input, struct error *err,
 
     // Check if this is the end of an expression. If true, end the evaluation.
     if (starts_with(*input, tokens[TOKEN_STATEMENT_END]) || starts_with(*input, tokens[TOKEN_CALL_END]))
+    {
+        // Possibly invert the output.
+        *out = not ? !(*out) : (*out);
         return true;
+    }
 
     // There is an operator, check that it is valid.
     TOKEN op = first_binary_operator;
@@ -346,6 +393,14 @@ bool eval_expression(struct context *ctx, const char **input, struct error *err,
     {
     case TOKEN_ADD:
         *out += right;
+        // Should not have a "not" for an expression.
+        if (not )
+        {
+            err->pos = not_pos;
+            err->desc = "eval_condition: "
+                        "Erronius TOKEN_NOT symbol in expression.";
+            return false;
+        }
         break;
     case TOKEN_EQUALS:
         *out = (*out == right);
@@ -356,10 +411,8 @@ bool eval_expression(struct context *ctx, const char **input, struct error *err,
     default:
         assert(false);
     }
-
     // Possibly invert the output.
     *out = not ? !(*out) : (*out);
-
     return true;
 }
 

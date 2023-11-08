@@ -1,6 +1,10 @@
-x = 20;
-y = 10000;
-ENQ(y);
-ENQ(x);
-x = DEQ;
-y = DEQ;
+ENQ(10);
+WHILE(!EMPTY) {
+    y = DEQ;
+    x = y;
+    WHILE(0 < x) {
+        ENQ(y + -1);
+        x = x + -1;
+    }
+    y = y + -1;
+}

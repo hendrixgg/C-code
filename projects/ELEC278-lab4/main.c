@@ -45,7 +45,7 @@ int main(int argc, char **argv)
         .pos = NULL,
         .desc = NULL,
         .test_output = fopen("../test_output.txt", "w"),
-        .test_input = fopen("../test-cases/case4.txt", "r"),
+        .test_input = fopen("../test-cases/case0.txt", "r"),
     };
 
     if (argc > 1)
@@ -70,12 +70,12 @@ int main(int argc, char **argv)
     }
     else
     {
-        // printf("Type some text: ");
-        // fflush(stdout);
-        // fgets(data, sizeof(data), stdin);
-        size_t count = fread(data, sizeof(*data), sizeof(data) - 1, err.test_input);
-        data[count] = '\0';
-        fclose(err.test_input);
+        printf("Type some text: ");
+        fflush(stdout);
+        fgets(data, sizeof(data), stdin);
+        // size_t count = fread(data, sizeof(*data), sizeof(data) - 1, err.test_input);
+        // data[count] = '\0';
+        // fclose(err.test_input);
         fprintf(err.test_output, "--- test started ---\n");
 
         if (run_statements(&ctx, &input, &err))
