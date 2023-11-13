@@ -126,8 +126,75 @@ void *array_back(array *a)
     return a->data + (a->length - 1) * a->size;
 }
 
-typedef struct bst_node *bst;
+/* to create a dfs iterator for a binary tree, and to implement a next function:
+    - you would have to create a bst_iterator struct that would contain a stack and the pointer to the current node.
+        - each element in the stack would store a pointer to a node and a count.
+        - initalize the iterator by putting the root node on the stack, with count = 1 (0: pre-order, 1:in-order, 2:post-order)
+        - call next to set the iterator's current node
+    - calling the next function on an iterator
+        - check if stack is empty
+            - if empty -> exit, returning false, indicating the end of iteration
+        - pop an element from the stack
+        - check if count on that element is zero
+            - count == 0:
+                - set the current node to be the new position of the iterator
+                - pre-order:
+                    - add left child node to the stack with count = 0
+                    - add right child node to the stack with count = 0
+                - in-order/post-order:
+                    - do nothing
+                - return true
+            - count > 0:
+                - subtract one from the count
+                - next operation depends on type of traversal:
+                    - pre-order: count == 0 always for pre-order, so you always process a node right away
+                    - in-order:
+                        - add right child node to the stack
+                        - add current node to the stack
+                        - add left child node to the stack
+                    -
+        - Unless that count is zero, the node is placed back on the stack, otherwise the iterator is set to it when next is called
 
+    how it works:
+        initializing iterator:
+            // we have a stack
+            stack s = stack_new();
+            // put root node on the stack
+            // BINARY TREE TRAVERSALS USE:: pre-order: pos = 2, in-order: pos = 1, post-order: pos = 0.
+            stack_push(s, {root, pos});
+            // call next for the first time to get the first node
+            next(iter);
+        calling next:
+            // loop while stack is not empty
+            while (!stack_empty(s))
+            {
+                // current node.
+                bst node;
+                // position for it to be added back on the stack.
+                int pos;
+                // get node and count from the stack. pretending pointers are being passed in here.
+                stack_pop(s, &{node, pos});
+                // set iterator to this node if it's count is -1.
+                if (c == -1)
+                {
+                    iterator->current = node;
+                    break;
+                }
+                // loop over child nodes, +1 to add back the parent node
+                for (int i = 0, j = node->num_children - 1; i < node->num_children + 1; i++)
+                {
+                    // Push parent on stack with -1, so that it is processed next time.
+                    if (i == c)
+                    {
+                        stack_push(s, {node, -1});
+                        continue;
+                    }
+                    // for binary tree: left child is node->child[0], right child is node->child[1]
+                    stack_push(s, {node->child[j--], pos});
+                }
+            }
+*/
+typedef struct bst_node *bst;
 struct bst_node
 {
     int value;
