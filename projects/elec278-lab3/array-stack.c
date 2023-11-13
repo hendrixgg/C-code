@@ -30,7 +30,6 @@ void stack_free(stack_ptr s)
 
 void stack_push(stack_ptr s, char c)
 {
-    // TODO (task 2): how do we push an entry onto the stack?
     assert(s != NULL);
     // Check if already at capacity, allocate more memory if needed.
     if (s->length == s->capacity)
