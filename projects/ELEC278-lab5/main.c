@@ -48,7 +48,6 @@ array *array_init(size_t element_size)
 bool array_clear(array *a)
 {
     assert(a != NULL);
-    // De-allocate a->data.
     free(a->data);
     a->data = NULL;
     a->capacity = a->length = 0;
@@ -63,7 +62,7 @@ bool array_free(array *a)
 }
 
 // Returns pointer to element at index i in the array. Index i must be less than a->length.
-void *array_at(array *a, size_t i)
+void *array_at(const array *a, size_t i)
 {
     assert(a != NULL);
     assert(i < a->length);
@@ -111,7 +110,7 @@ void array_pop_back(array *a)
 }
 
 // Returns pointer to the first element in the array.
-void *array_front(array *a)
+void *array_front(const array *a)
 {
     assert(a != NULL);
     assert(a->length > 0);
@@ -119,7 +118,7 @@ void *array_front(array *a)
 }
 
 // Returns pointer to the last element in the array.
-void *array_back(array *a)
+void *array_back(const array *a)
 {
     assert(a != NULL);
     assert(a->length > 0);
@@ -427,7 +426,7 @@ void bst_conditional_insert_temp_tree(const bst tree)
     // In that case, just skip to the next element in the tree.
 }
 
-// Returns a bst tree containing all elements that are present if both tree1 and tree2.
+// Returns a bst tree containing all elements that are present in both tree1 and tree2.
 bst bst_intersection(const bst tree1, const bst tree2)
 {
     // Traverse tree1 In-Order, inserting all elements into an array.
@@ -447,7 +446,7 @@ bst bst_intersection(const bst tree1, const bst tree2)
     bst_foreach_inorder(tree2, &bst_conditional_insert_temp_tree);
 
     // Free the data in tree1_elements_inorder.
-    array_delete(tree1_elements_inorder);
+    array_free(tree1_elements_inorder);
     return new_tree;
 }
 
