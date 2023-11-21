@@ -16,4 +16,9 @@ set(CMAKE_C_STANDARD 11)
 
 # add_executable(week4p2 week4p2.c)
 
-add_executable(week5p2 week5p2.c)
+# add_executable(week5p2 week5p2.c)
+
+# add_executable(week7p1 week7p1.c)
+
+# add_executable(week9p1 week9p1.c)
+add_executable(week9p2 week9p2.c)
