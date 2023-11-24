@@ -29,6 +29,7 @@ static void set_cell_attr(attr_t attr)
             NULL);
 }
 
+// Ensure edit_text has memory allocated for at least capacity characters.
 static void ensure_edit_text_capacity(size_t capacity)
 {
     if (capacity <= edit_text_capacity)

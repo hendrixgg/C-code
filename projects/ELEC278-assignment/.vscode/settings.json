@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "ncurses.h": "c"
+        "ncurses.h": "c",
+        "typeinfo": "c",
+        "type_traits": "c"
     }
 }
