@@ -1,6 +1,7 @@
 #include "model.h"
 #include "interface.h"
 
+// TODO: Comment on what is used from each standard library header file.
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,38 +13,32 @@
 #include <stdio.h>
 #include <assert.h>
 
+// Classification of user input to a cell.
 typedef enum _CELL_TYPE
+{
+    EMPTY,
+    CONST,
+    FORMULA,
+} CELL_TYPE;
+
+// Data type stored in a cell.
+typedef enum _DATA_TYPE
 {
     NUMBER,
     STRING,
-    FORMULA,
     ERROR,
-} CELL_TYPE;
-
-// v = value union, type = type of value.
-typedef struct _number
-{
-    union number_union
-    {
-        int i;
-        float f;
-    } v;
-    enum NUMBER_TYPE
-    {
-        INT,
-        FLOAT,
-    } type;
-} number;
+} DATA_TYPE;
 
 typedef struct _cell_pos_t cell_pos_t;
 typedef struct _cell_t cell_t;
+typedef float number;
 
 // Stores a pointer to a cell, and a size_t pos.
 struct _cell_pos_t
 {
     // Pointer to the cell.
     cell_t *cell;
-    // The position of the parent cell in the chlid->parents array.
+    // Position of the cell in the parent/child array.
     size_t pos;
 };
 
@@ -58,26 +53,27 @@ struct _cell_t
     size_t text_input_len;
     // Stores the text that is shown in the cell of the table as a null character terminated string.
     char text_display[CELL_DISPLAY_WIDTH + 1];
-    // Stores which type input the cell is. Either a number, string, or formula.
-    CELL_TYPE type;
+    // Stores which type of input is in the cell is. Either EMPTY, CONST, or FORMULA.
+    CELL_TYPE input_type;
+    // Stores the data type of the cell. Either a NUMBER, STRING, or ERROR. Undefined for input_type of EMPTY.
+    DATA_TYPE data_type;
     // Store the numerical value of the cell. If the cell is a string, then this value is undefined.
-    number value;
+    number num;
 
+    // TODO: Make parents dynamically allocated.
     // This array will have to be dynamically updated as new parents are added/removed.
-    // Array of {cell_t *, size_t} = {parent cell, position of current cell in parent cell children array}.
-    cell_pos_t *parents;
+    // Array of {`cell_t *`, `size_t`} = {parent cell, position of current cell in parent cell children array}.
+    // parents[i] = {p_i*, p_i.children.indexOf(this)}
+    cell_pos_t parents[NUM_ROWS * NUM_COLS];
     size_t num_parents;
 
+    // TODO: Make children dynamically allocated.
     // This array will have to be dynamically updated as new children are added/removed.
-    // Array of {cell_t *, size_t} = {child cell, position of current cell in child cell parent array}.
-    cell_pos_t *children;
+    // Array of {`cell_t *`, `size_t`} = {child cell, position of current cell in child cell parent array}.
+    // children[i] = {c_i*, c_i.parents.indexOf(this)}
+    cell_pos_t children[NUM_ROWS * NUM_COLS];
     size_t num_children;
 
-    // A flag used to mark the longest path to the cell during an update. Used to avoid a circular dependency and to ensure that cells are updated in the correct order.
-    size_t depth_flag;
-    // The longest path to a parent/grandparent of the cell. depth = 0 means that this cell does not refer to other cells. Calculated when evaluating the formula.
-    size_t depth;
-    // TODO: figure out what is needed here.
     // A flag used to mark if the cell has been visited during an update. Used to avoid a circular dependency and to ensure that cells are updated in the correct order.
     bool flag;
 };
@@ -93,19 +89,20 @@ void model_init()
         // For each column in the row.
         for (COL col = COL_A; col < NUM_COLS; col++)
         {
-            // Inialize the data type as STRING.
-            table[row][col].type = STRING;
+            // Inialize the data type as EMPTY.
+            table[row][col].input_type = EMPTY;
             // Initalize the text_input string.
             table[row][col].text_input = malloc(sizeof(char));
             table[row][col].text_input[0] = '\0';
             table[row][col].text_input_len = 0;
             // Initialize the text_display string to empty.
-            table[row][col].text_display[0] = table[row][col].text_display[CELL_DISPLAY_WIDTH] = '\0';
-            // The children array starts out as empty.
-            table[row][col].children = NULL;
-            table[row][col].num_children = 0;
-            // Set the depth and depth_flag to 0.
-            table[row][col].depth_flag = table[row][col].depth = 0;
+            table[row][col].text_display[0] = '\0';
+            // The children and parents array starts out as empty.
+            table[row][col].num_children = table[row][col].num_parents = 0;
+            // // Set the depth and depth_flag to 0.
+            // table[row][col].depth_flag = table[row][col].depth = 0;
+            // Set the flag to false.
+            table[row][col].flag = false;
         }
     }
 }
@@ -123,49 +120,70 @@ bool parse_number(const char *text, char **endptr, number *out)
     assert(text != NULL);
     assert(out != NULL);
     // If the user didn't specify an endptr, then use a temporary one.
-    char *endptr_temp = NULL;
+    // Set the endptr to text so that we can check if it was updated when calling strtof.
+    char *endptr_temp = (char *)text;
     if (endptr == NULL)
         endptr = &endptr_temp;
-    *endptr = NULL;
-    // Parse an int.
+    // Set errno to zero so we can check if it was updated when calling strtof.
     errno = 0;
-    out->v.i = (int)strtol(text, endptr, 10);
-    // Was a valid int. Retrun INT.
-    if (*endptr != NULL && **endptr == '\0' && errno != ERANGE)
-    {
-        out->type = INT;
-        return true;
-    }
-    // Parse a float.
-    errno = 0;
-    out->v.f = strtof(text, endptr);
-    // Was a valid float. Retrun FLOAT.
-    if (*endptr != NULL && **endptr == '\0' && errno != ERANGE && !isinf(out->v.f) && !isnan(out->v.f))
-    {
-        out->type = FLOAT;
-        return true;
-    }
-    // Was not a number.
-    return false;
+    // Parse a float. This algorithm supoprts scientific notation.
+    *out = strtof(text, endptr);
+    // return whether the parsing was successful.
+    return *endptr != text && errno != ERANGE && !isinf(*out) && !isnan(*out);
+}
+
+void cell_update_display_num(cell_t *c1)
+{
+    // assert assumptions.
+    assert(c1 != NULL);
+    assert(c1->input_type == CONST || c1->input_type == FORMULA);
+
+    // Set the display text to have 1 digit after a decimal point.
+    snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "%.1f", c1->num);
 }
 
 /**
+ * Checks if the character is an operator. Currently only supports '+' and '-'.
  *
- * @param cell The cell to update the formula for, based on it's text_input.
- * @param curr_depth The current depth of the cell. Used to avoid circular dependencies.
+ * @param op The character to check.
+ *
+ * @return true if the character is an operator, otherwise false.
  */
-bool update_cell_formula(cell_t *cell, size_t curr_depth)
+bool is_operator(char op)
+{
+    switch (op)
+    {
+    case '+':
+    case '-':
+        return true;
+    default:
+        return false;
+    }
+}
+
+/**
+ * Updates the cell.num and cell.text_display by re-evaluating the formula stored in the cell's text_input.
+ *
+ * @param cell The cell whose formula to update.
+ *
+ * @return true if the formula was updated successfully, otherwise false.
+ */
+bool cell_update_formula(cell_t *c1)
 {
     // assert assumptions.
-    assert(cell != NULL);
-    assert(cell->type == FORMULA);
-    assert(cell->text_input != NULL);
-    assert(cell->text_input[0] == '=');
+    assert(c1 != NULL);
+    assert(c1->text_input != NULL);
+    assert(c1->text_input[0] == '=');
+    assert(c1->input_type == FORMULA);
 
-    bool error = false;
-    char *text = cell->text_input;
+    // Pointer to the beginning of the formula string (after the equals sign).
+    char *text = c1->text_input + 1;
+    // The previous operator. Assuming that we are starting by doing 0+...
+    char prev_op = '+';
+    // reset the cell.num to 0.
+    c1->num = 0;
     // Loop over the formula string.
-    for (number value; !error && text != NULL && *text != '\0'; text++)
+    for (number tmp_num; text != NULL && is_operator(prev_op); prev_op = *(text++))
     {
         // Identified a potential cell reference.
         if (*text >= 'A' && *text <= 'G')
@@ -174,57 +192,75 @@ bool update_cell_formula(cell_t *cell, size_t curr_depth)
             COL parent_col = *text - 'A';
             // Next character. Check if it is a valid row number.
             assert(++text != NULL);
-            // Pointer to the beginning of the input.
-            char *endptr = NULL;
+            // Set the endptr to text so that we can check if it was updated when calling strtol.
+            char *endptr = (char *)text;
             // Parse an int.
             errno = 0;
             ROW parent_row = (ROW)(strtol(text, &endptr, 10) - 1);
-            // Was not a valid row number, or was a reference to the current cell. Exit with error.
-            if (endptr == NULL || errno == ERANGE || (parent_row < ROW_1 || parent_row > NUM_ROWS) || &table[parent_row][parent_col] == cell)
+            // Was not a valid row number.
+            if (endptr == text || errno == ERANGE || (parent_row < ROW_1 || parent_row > NUM_ROWS))
             {
-                strncpy(cell->text_display, "ERR:SYNTAX", CELL_DISPLAY_WIDTH + 1);
-                cell->type = ERROR;
-                error = true;
-                break;
+                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:SYNTAX");
+                c1->data_type = ERROR;
+                return false;
+            }
+            cell_t *p = &table[parent_row][parent_col];
+            // Check for circular dependency. Ensure not referring to self. Reference to a child/grandchild cell is checked for when updating children. Self references are also checked then, but we can check here to avoid the error down the line
+            if (p == c1)
+            {
+                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:CIRC");
+                c1->data_type = ERROR;
+                return false;
+            }
+            // Ensure this cell is a (FORMULA or CONST) and data type NUMBER.
+            if (!((p->input_type == FORMULA || p->input_type == CONST) && p->data_type == NUMBER))
+            {
+                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:TYPE");
+                c1->data_type = ERROR;
+                return false;
             }
             // Advance the text position to the end of the row number.
             text = endptr;
-            value = table[parent_row][parent_col].value;
-            // Ensure this cell is a number or formula.
-            if (value.type != NUMBER && value.type != FORMULA)
-            {
-                strncpy(cell->text_display, "ERR:TYPE", CELL_DISPLAY_WIDTH + 1);
-                cell->type = ERROR;
-                error = true;
-                break;
-            }
-            // Check for circular dependency.
-            if (table[parent_row][parent_col].flag)
-            {
-                strncpy(cell->text_display, "ERR:CIRC", CELL_DISPLAY_WIDTH + 1);
-                cell->type = ERROR;
-                error = true;
-                break;
-            }
+            // set the tmp_num to the parent cell's number.
+            tmp_num = p->num;
+            // Add new parent to parents array of c1.
+            c1->parents[c1->num_parents++] = (cell_pos_t){p, p->num_children};
+            // update the children array of the parent cell.
+            p->children[p->num_children++] = (cell_pos_t){c1, c1->num_parents - 1};
         }
-        // Must be a number
-        else if (!parse_number(text, &text, &value))
+        // Must be a number. If parsing fails, return false.
+        else if (!parse_number(text, &text, &tmp_num))
         {
-            strncpy(cell->text_display, "ERR:NAN", CELL_DISPLAY_WIDTH + 1);
-            cell->type = ERROR;
-            error = true;
-            break;
+            snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:NAN");
+            c1->data_type = ERROR;
+            return false;
         }
         assert(text != NULL);
-        // If we were using INT until now, but now see floats, then convert value type to float.
-        if (value.type == FLOAT && cell->value.type == INT)
+        // Overflow and Underflow is not being checked.
+        switch (prev_op)
         {
-            cell->value.v.f = value.v.f;
-            cell->value.type = FLOAT;
+        case '+':
+            c1->num += tmp_num;
+            break;
+        case '-':
+            c1->num -= tmp_num;
+            break;
+        // Should never reach here since we are checking for operators in the for loop condition.
+        default:
+            assert(false);
+            break;
         }
-        // TODO: check for an operator
     }
-    return !error && text != NULL && *text == '\0';
+    // If the whole input was read correctly, then update the cell.text_display.
+    if (prev_op == '\0')
+    {
+        cell_update_display_num(c1);
+        c1->data_type = NUMBER;
+        return true;
+    }
+    snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:SYNTAX");
+    c1->data_type = ERROR;
+    return false;
 }
 
 void set_cell_value(ROW row, COL col, char *text)
@@ -233,117 +269,109 @@ void set_cell_value(ROW row, COL col, char *text)
     assert(row >= ROW_1 && row < NUM_ROWS);
     assert(col >= COL_A && col < NUM_COLS);
 
-    // Reset the input text.
-    free(table[row][col].text_input);
-    table[row][col].text_input = text;
-    table[row][col].text_input_len = strlen(text);
+    // Pointer to the current cell.
+    cell_t *c1 = &table[row][col];
+
+    // Clear the old the input text.
+    free(c1->text_input);
+    // Set the new input text.
+    c1->text_input = text;
+    c1->text_input_len = strlen(text);
+
+    // Remove c1 from all its previous parents' children arrays.
+    // Do this by moving the last child in each parent array into the position of the current cell, and decrementing the parent's num_children.
+    // Then update the moved child's saved position in the parent's children array.
+
+    // c1_parents_indexOf_p.
+    size_t i;
+    for (i = 0; i < c1->num_parents; i++)
+    {
+        // Parent cell that c1 is being removed from.
+        cell_t *p = c1->parents[i].cell;
+        // Position of c1 in p->children.
+        size_t p_children_indexOf_c1 = c1->parents[i].pos;
+        // We know that p->num_children > 0 since c1 was in p->children. So we can safely decrement p->num_children.
+        // If c1 was the last child in the array, then there is nothing to swap.
+        if (--p->num_children == 0)
+            continue;
+        // Sibling cell that is being moved to the current cell's position. (last child in p->children)
+        cell_t *c2 = p->children[p->num_children].cell;
+        // c2_parents_indexOf_p.
+        size_t j = p->children[p->num_children].pos;
+        // Overwrite record of c1 with c2.
+        p->children[p_children_indexOf_c1] = p->children[p->num_children];
+        // Update position of p in c2->parents.
+        c2->parents[j].pos = p_children_indexOf_c1;
+    }
+    // Set parents to zero since we removed c1 from all of their children arrays.
+    c1->num_parents = 0;
 
     // Update the cell with it's new text_input.
-    // Save the old value and type in case we need to update children.
-    number old_value = table[row][col].value;
-    CELL_TYPE old_type = table[row][col].type;
-    switch (*(table[row][col].text_input))
+    // Save the old numeric value and type in case we need to update children.
+    number old_num = c1->num;
+    CELL_TYPE old_input_type = c1->input_type;
+    DATA_TYPE old_data_type = c1->data_type;
+    // FORMULA
+    if (*(c1->text_input) == '=')
     {
-
-    // Formula
-    case '=':
-        // parse_formula(table[row][col].text_input, row, col);
-        table[row][col].type = FORMULA;
-        strncpy(table[row][col].text_display, table[row][col].text_input, CELL_DISPLAY_WIDTH + 1);
-        break;
-    // INT or FLOAT
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-        parse_number(table[row][col].text_input, NULL, &table[row][col].value);
-        switch (table[row][col].type)
+        c1->input_type = FORMULA;
+        cell_update_formula(c1);
+    }
+    // CONST
+    else
+    {
+        c1->input_type = CONST;
+        // NUMBER
+        if (isdigit((*(c1->text_input))) && parse_number(c1->text_input, NULL, &c1->num))
         {
-            // TODO: FIX ERROR HERE.
-        case INT:
-            // Set the display text.
-            strncpy(table[row][col].text_display, table[row][col].text_input, CELL_DISPLAY_WIDTH + 1);
-            break;
-        case FLOAT:
-            // Set the display text to have at most 1 digit after a decimal point.
-            snprintf(table[row][col].text_display, CELL_DISPLAY_WIDTH + 1, "%.1f", table[row][col].value.v.f);
-            break;
-        // Not a number. Must be STRING.
-        case ERROR:
-            table[row][col].type = STRING;
-            strncpy(table[row][col].text_display, table[row][col].text_input, CELL_DISPLAY_WIDTH + 1);
-            break;
-        // Should never happen.
-        default:
-            assert(false);
-            break;
+            c1->data_type = NUMBER;
+            cell_update_display_num(c1);
         }
-        break;
-    // STRING
-    default:
-        table[row][col].type = STRING;
-        strncpy(table[row][col].text_display, table[row][col].text_input, CELL_DISPLAY_WIDTH + 1);
-        break;
+        // STRING
+        else if (c1->text_input_len > 0)
+        {
+            c1->data_type = STRING;
+            snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, c1->text_input);
+        }
     }
 
     // TODO: If the cell has changed and has children, update them.
-    // if (table[row][col].type != old_type || table[row][col].value.i != old_value.i)
-    // {
-    //     // Flag our current cell as visited before updating children.
-    //     table[row][col].depth_flag = 0;
-    //     // For each child.
-    //     for (size_t i = 0; i < table[row][col].num_children; i++)
-    //     {
-    //         // Update the child cell by recalculating it's value by it's formula.
-    //         update_cell_formula(&table[row][col].children[i].cell);
-    //         // If there is a circular dependency, then set the display text to "CIR. DEP.".
-    //     }
-    //     table[row][col].flag = false;
-    // }
+    if (c1->num_children > 0 && (old_input_type != c1->input_type || old_data_type != c1->data_type || old_num != c1->num))
+    {
 
+        // all cells should be flagged as not visited.
+        // all cells should be flagged as not on the stack.
+        // stack starts empty.
+        // dfs from c1:
+        //      if cell has already been added to the stack, then we can return true.
+        //      if the cell is flagged as being processed, then there is a circular dependency. return false.
+        //      Flag the current cell as being processed.
+        //      loop over children, call dfs on each child:
+        //          if a child return false exit the loop and return false. alternatively, could keep track of which children caused errors so we can display them to the user.
+        //      unflag the current cell as being processed.
+        //      if there were no circular dependencies, add the current cell to the stack. and mark current cell as on the stack. return true.
+        //      if there were circular dependencies, return false.
+        // if dfs returns false, then there was a circular dependency. set c1 to ERR:CIRC (or set the error to show which cells it is circularly referring to), clear the stack, and return.
+
+        // c1 was on the stack, so we can continue and update the children. start by popping c1 off the stack. since we updated it earlier on in this function, we don't need to update it again.
+        // This will result in the cells with no children being at the bottom of the stack, and the cells with the most children (direct descendents of c1) being at the top of the stack.
+
+        // loop while the stack is not empty.
+        // Pop of each cell from the stack and update it.
+        // This will result in such that as each cell is popped from the stack, all of it's parents have been popped already.
+    }
     // Update display text in the interface.
-    update_cell_display(row, col, table[row][col].text_display);
-
-    // switch (table[row][col].type)
-    // {
-    // case INT:
-    //     update_cell_display(row, col, "INT");
-    //     break;
-    // case FLOAT:
-    //     update_cell_display(row, col, "FLOAT");
-    //     break;
-    // case STRING:
-    //     update_cell_display(row, col, "STRING");
-    //     break;
-    // case ERROR:
-    //     update_cell_display(row, col, "ERROR");
-    //     break;
-    // case FORMULA:
-    //     update_cell_display(row, col, "FORMULA");
-    //     break;
-
-    // default:
-    //     assert(false);
-    //     break;
-    // }
+    update_cell_display(row, col, c1->text_display);
 }
 
 void clear_cell(ROW row, COL col)
 {
-    // TODO: implement this.
+    // assert assumptions.
+    assert(row >= ROW_1 && row < NUM_ROWS);
+    assert(col >= COL_A && col < NUM_COLS);
 
-    // Clear the input and display strings.
-    table[row][col].text_input[0] = table[row][col].text_display[0] = '\0';
-    table[row][col].text_input_len = 0;
-    table[row][col].type = STRING;
-    // Update the interface.
-    update_cell_display(row, col, table[row][col].text_display);
+    // Call set cell value with an empty string. This handles all child/parent updates and updating the display text in the interface.
+    set_cell_value(row, col, strdup(""));
 }
 
 char *get_textual_value(ROW row, COL col)

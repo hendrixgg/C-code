@@ -5,11 +5,12 @@
 
 #define CELL_DISPLAY_WIDTH 11
 
-// Updates the text which is displayed in a cell.
-//
-// The contents of 'text' are only accessed during the function call, and the
-// function does not modify or deallocate the string. Only the first
-// CELL_DISPLAY_WIDTH characters will be used.
+/**
+ * Updates the text which is displayed in a cell.
+ * @param row the row of the cell to update.
+ * @param col the column of the cell to update.
+ * @param text the text to display in the cell. The first CELL_DISPLAY_WIDTH characters will be used, unless the null terminator is reached first. Ensure that `strlen(text) >= CELL_DISPLAY_WIDTH` otherwise there may be memory access errors.
+ */
 void update_cell_display(ROW row, COL col, const char *text);
 
-#endif //ASSIGNMENT_INTERFACE_H
+#endif // ASSIGNMENT_INTERFACE_H

@@ -11,7 +11,7 @@
 void model_init();
 
 /**
- * Sets the value of a cell based on user input.
+ * Sets the value of a cell based on user input. Updates the interface to reflect the new value by calling 'update_cell_display' (see interface.h).
  *
  * @param row The row of the cell.
  * @param col The column of the cell.
