@@ -24,4 +24,4 @@ void stack_push(stack_ptr s, char c);
 // Returns false if the stack is empty.
 bool stack_pop(stack_ptr s, char *out);
 
-#endif //LAB3_STACK_H
+#endif // LAB3_STACK_H

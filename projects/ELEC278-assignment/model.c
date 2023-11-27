@@ -1,5 +1,6 @@
-#include "model.h"
-#include "interface.h"
+#include "model.h"     // Header file that this file implements.
+#include "interface.h" // for update_cell_display and CELL_DISPLAY_WIDTH.
+#include "stack.h"     // for stack_t, stack_new, stack_push, stack_pop, and stack_free.
 
 // TODO: Comment on what is used from each standard library header file.
 #include <stddef.h>
@@ -13,71 +14,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-// Classification of user input to a cell.
-typedef enum _CELL_TYPE
-{
-    EMPTY,
-    CONST,
-    FORMULA,
-} CELL_TYPE;
-
-// Data type stored in a cell.
-typedef enum _DATA_TYPE
-{
-    NUMBER,
-    STRING,
-    ERROR,
-} DATA_TYPE;
-
-typedef struct _cell_pos_t cell_pos_t;
-typedef struct _cell_t cell_t;
-typedef float number;
-
-// Stores a pointer to a cell, and a size_t pos.
-struct _cell_pos_t
-{
-    // Pointer to the cell.
-    cell_t *cell;
-    // Position of the cell in the parent/child array.
-    size_t pos;
-};
-
-/**
- * A cell is a node in a directed-acyclic-graph. Meaning that each cell can have multiple parents and children, but there are no circular dependencies. A particular cell will never be present in either it's children or one of it's children's children.
- */
-struct _cell_t
-{
-    // Stores the text that you see in the input bar at the top as a null character terminated string.
-    char *text_input;
-    // Length of 'text_input' string.
-    size_t text_input_len;
-    // Stores the text that is shown in the cell of the table as a null character terminated string.
-    char text_display[CELL_DISPLAY_WIDTH + 1];
-    // Stores which type of input is in the cell is. Either EMPTY, CONST, or FORMULA.
-    CELL_TYPE input_type;
-    // Stores the data type of the cell. Either a NUMBER, STRING, or ERROR. Undefined for input_type of EMPTY.
-    DATA_TYPE data_type;
-    // Store the numerical value of the cell. If the cell is a string, then this value is undefined.
-    number num;
-
-    // TODO: Make parents dynamically allocated.
-    // This array will have to be dynamically updated as new parents are added/removed.
-    // Array of {`cell_t *`, `size_t`} = {parent cell, position of current cell in parent cell children array}.
-    // parents[i] = {p_i*, p_i.children.indexOf(this)}
-    cell_pos_t parents[NUM_ROWS * NUM_COLS];
-    size_t num_parents;
-
-    // TODO: Make children dynamically allocated.
-    // This array will have to be dynamically updated as new children are added/removed.
-    // Array of {`cell_t *`, `size_t`} = {child cell, position of current cell in child cell parent array}.
-    // children[i] = {c_i*, c_i.parents.indexOf(this)}
-    cell_pos_t children[NUM_ROWS * NUM_COLS];
-    size_t num_children;
-
-    // A flag used to mark if the cell has been visited during an update. Used to avoid a circular dependency and to ensure that cells are updated in the correct order.
-    bool flag;
-};
-
 // Stores all the cells in the table;
 static cell_t table[NUM_ROWS][NUM_COLS];
 
@@ -89,20 +25,23 @@ void model_init()
         // For each column in the row.
         for (COL col = COL_A; col < NUM_COLS; col++)
         {
-            // Inialize the data type as EMPTY.
-            table[row][col].input_type = EMPTY;
-            // Initalize the text_input string.
-            table[row][col].text_input = malloc(sizeof(char));
-            table[row][col].text_input[0] = '\0';
+            // Set the row and column of the cell.
+            table[row][col].r = row;
+            table[row][col].c = col;
+            // Inialize the input type as CONST.
+            table[row][col].input_type = CONST;
+            // Initialize the data type as STRING.
+            table[row][col].data_type = STRING;
+            // Initalize the text_input string to "".
+            table[row][col].text_input = strdup("");
             table[row][col].text_input_len = 0;
             // Initialize the text_display string to empty.
             table[row][col].text_display[0] = '\0';
             // The children and parents array starts out as empty.
             table[row][col].num_children = table[row][col].num_parents = 0;
-            // // Set the depth and depth_flag to 0.
-            // table[row][col].depth_flag = table[row][col].depth = 0;
-            // Set the flag to false.
-            table[row][col].flag = false;
+            // Set the flags to false.
+            table[row][col].in_process = table[row][col].on_stack = false;
+            table[row][col].children_processed = 0;
         }
     }
 }
@@ -117,6 +56,7 @@ void model_init()
  */
 bool parse_number(const char *text, char **endptr, number *out)
 {
+    // assert assumptions.
     assert(text != NULL);
     assert(out != NULL);
     // If the user didn't specify an endptr, then use a temporary one.
@@ -132,18 +72,23 @@ bool parse_number(const char *text, char **endptr, number *out)
     return *endptr != text && errno != ERANGE && !isinf(*out) && !isnan(*out);
 }
 
+/**
+ * Updates `c1->text_display` to contain `c1->num` with 1 digit after the decimal point.
+ *
+ * @param cell The pointer to cell whose text_display to update. Must be a cell with data_type `NUMBER`, otherwise undefined behaviour.
+ */
 void cell_update_display_num(cell_t *c1)
 {
     // assert assumptions.
     assert(c1 != NULL);
-    assert(c1->input_type == CONST || c1->input_type == FORMULA);
+    assert(c1->data_type == NUMBER);
 
     // Set the display text to have 1 digit after a decimal point.
     snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "%.1f", c1->num);
 }
 
 /**
- * Checks if the character is an operator. Currently only supports '+' and '-'.
+ * Checks if the character is an operator. Currently only supporting '+' and '-'.
  *
  * @param op The character to check.
  *
@@ -162,31 +107,45 @@ bool is_operator(char op)
 }
 
 /**
- * Updates the cell.num and cell.text_display by re-evaluating the formula stored in the cell's text_input.
+ * Updates the c1->num and c1->text_display by re-evaluating the formula stored in the cell's text_input. Will update the parent-child relationships if new_formula is true.
  *
- * @param cell The cell whose formula to update.
+ * @param cell The cell whose formula to update. Must be a cell with input_type FORMULA, otherwise undefined behaviour.
+ * @param new_formula A flag to indicate if the formula is new. If true, then c1->parents must have been cleared before calling this function and that c1->num_parents == 0. New parent-child relationships will be created for each cell referenced in the formula. Otherwise, the existing parent-child relationships will remain unchanged.
  *
  * @return true if the formula was updated successfully, otherwise false.
  */
-bool cell_update_formula(cell_t *c1)
+bool cell_update_formula(cell_t *c1, bool new_formula)
 {
     // assert assumptions.
     assert(c1 != NULL);
     assert(c1->text_input != NULL);
     assert(c1->text_input[0] == '=');
     assert(c1->input_type == FORMULA);
+    assert((new_formula && c1->num_parents == 0) || !new_formula);
 
     // Pointer to the beginning of the formula string (after the equals sign).
     char *text = c1->text_input + 1;
     // The previous operator. Assuming that we are starting by doing 0+...
     char prev_op = '+';
-    // reset the cell.num to 0.
-    c1->num = 0;
+    // Start with a result of 0.
+    number result = 0;
+    // Could support more complex expressions by first converting the expression to postfix notation taking into account brackets and operator precedence, and then evaluating the postfix expression.
     // Loop over the formula string.
     for (number tmp_num; text != NULL && is_operator(prev_op); prev_op = *(text++))
     {
-        // Identified a potential cell reference.
-        if (*text >= 'A' && *text <= 'G')
+        // Got a number. Parse it.
+        if (isdigit(*text))
+        {
+            // Was not a valid number.
+            if (!parse_number(text, &text, &tmp_num))
+            {
+                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:NAN");
+                c1->data_type = ERROR;
+                return false;
+            }
+        }
+        // Got a letter. Check if it is a valid cell reference.
+        else if (isalpha(*text))
         {
             // Convert the letter to a column.
             COL parent_col = *text - 'A';
@@ -197,55 +156,53 @@ bool cell_update_formula(cell_t *c1)
             // Parse an int.
             errno = 0;
             ROW parent_row = (ROW)(strtol(text, &endptr, 10) - 1);
-            // Was not a valid row number.
-            if (endptr == text || errno == ERANGE || (parent_row < ROW_1 || parent_row > NUM_ROWS))
+            // row number or column invalid.
+            if (endptr == text || errno == ERANGE || (parent_row < ROW_1 || parent_row > NUM_ROWS) || (parent_col < COL_A || parent_col > NUM_COLS))
             {
-                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:SYNTAX");
+                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:REF");
                 c1->data_type = ERROR;
                 return false;
             }
+            // Not checking for self reference circular dependency. Circular dependencies will be caught when updating children.
             cell_t *p = &table[parent_row][parent_col];
-            // Check for circular dependency. Ensure not referring to self. Reference to a child/grandchild cell is checked for when updating children. Self references are also checked then, but we can check here to avoid the error down the line
-            if (p == c1)
+            // If we are dealing with a new formula, then update to reflect new parent.
+            // If this is a repeated reference to the same parent, this code will add a duplicate parent of p in c1->parents and a duplicate child of c1 in p->children. This is not a breaking problem since we are duplicating in both directions here and deleting in both directions when set_cell_value is called. This inefficiency could be avoided by storing a flag on the parent cell for the duration of this function call to indicate that it has already been added as a parent of c1, then only adding a parent if that flag is false, then setting the flag to true once added as a parent. Finally, loop over parents of c1 and reset the flags to false before returning from the function. There is a trade-off between memory and speed here. If the same reference is included multiple times in the formula expression the current implementation is simpler but uses more memory when adding duplicate parents and incurs a slowdown when removing the duplicates in set_cell_value. The alternative implementation would likely end up using less memory overall (only storing an additional boolean flag compared to storing multiple duplicate pointers in the parents array) and would be slower when looping over parents to clear the flags at the end of the function call but would be faster when clearing parents in set_cell_value.
+            if (new_formula)
             {
-                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:CIRC");
-                c1->data_type = ERROR;
-                return false;
+                // Add new parent to parents array of c1.
+                c1->parents[c1->num_parents++] = (cell_pos_t){p, p->num_children};
+                // Add c1 to children array of parent.
+                p->children[p->num_children++] = (cell_pos_t){c1, c1->num_parents - 1};
             }
-            // Ensure this cell is a (FORMULA or CONST) and data type NUMBER.
-            if (!((p->input_type == FORMULA || p->input_type == CONST) && p->data_type == NUMBER))
+            // Ensure this p is has data type NUMBER before continuing with the rest of the evaluation.
+            if (p->data_type != NUMBER)
             {
-                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:TYPE");
+                snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:REFNAN");
                 c1->data_type = ERROR;
                 return false;
             }
             // Advance the text position to the end of the row number.
             text = endptr;
-            // set the tmp_num to the parent cell's number.
+            // Set the tmp_num to the parent cell's number.
             tmp_num = p->num;
-            // Add new parent to parents array of c1.
-            c1->parents[c1->num_parents++] = (cell_pos_t){p, p->num_children};
-            // update the children array of the parent cell.
-            p->children[p->num_children++] = (cell_pos_t){c1, c1->num_parents - 1};
         }
-        // Must be a number. If parsing fails, return false.
-        else if (!parse_number(text, &text, &tmp_num))
+        else
         {
-            snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:NAN");
+            // Invalid character.
+            snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:SYNTAX");
             c1->data_type = ERROR;
             return false;
         }
-        assert(text != NULL);
-        // Overflow and Underflow is not being checked.
+        // Overflow and underflow is not being checked.
         switch (prev_op)
         {
         case '+':
-            c1->num += tmp_num;
+            result += tmp_num;
             break;
         case '-':
-            c1->num -= tmp_num;
+            result -= tmp_num;
             break;
-        // Should never reach here since we are checking for operators in the for loop condition.
+        // Should never reach default since we are checking for valid operators in the loop condition.
         default:
             assert(false);
             break;
@@ -254,17 +211,70 @@ bool cell_update_formula(cell_t *c1)
     // If the whole input was read correctly, then update the cell.text_display.
     if (prev_op == '\0')
     {
-        cell_update_display_num(c1);
+        c1->num = result;
         c1->data_type = NUMBER;
+        cell_update_display_num(c1);
         return true;
     }
+    // Otherwise, there was a syntax error.
     snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:SYNTAX");
     c1->data_type = ERROR;
     return false;
 }
 
+// all cells should have set in_progress and on_stack flags to be false before calling this function from outside.
+// stack starts empty.
+// dfs from c1:
+//      if cell has already been added to the stack, then we can return true.
+//      Flag the current cell as in_process.
+//      loop over children:
+//          if a child is flagged as in_process. - Circular dependency. don't dfs on this child. skip to next child.
+//          call dfs on child.
+//
+//      unflag the current cell as being processed.
+//      add the current cell to the stack. mark it as on_stack.
+void dfs_update_ordering(cell_t *c1, stack_t *s)
+{
+    // assert assumptions.
+    assert(c1 != NULL);
+    assert(s != NULL);
+    assert(!c1->in_process);
+    assert(s != NULL);
+
+    // c1 is already on the stack. Return.
+    if (c1->on_stack)
+        return;
+    // Flag the current cell as being processed. This is the only place where we set in_process to true.
+    c1->in_process = true;
+    // Process each child.
+    for (c1->children_processed = 0; c1->children_processed < c1->num_children; c1->children_processed++)
+    {
+        assert(c1->children[c1->children_processed].cell->input_type == FORMULA);
+        // If a child is already in process, we know that must be circularly referring to c1.
+        if (c1->children[c1->children_processed].cell->in_process)
+        {
+            snprintf(c1->children[c1->children_processed].cell->text_display, CELL_DISPLAY_WIDTH + 1, "ERR:CIRC");
+            c1->children[c1->children_processed].cell->data_type = ERROR;
+            c1->children[c1->children_processed].cell->circular_dependency = true;
+            // TODO: Could keep track that this parent-child relationship caused errors so we can tell the user. For now just mark the child as an ERR:CIRC.
+            // c1 is the circular parent of c1->children[c1->children_processed].cell
+            continue;
+        }
+        // Child cell is not causing a circular dependency. dfs on it.
+        c1->children[c1->children_processed].cell->circular_dependency = false;
+        // Process the child.
+        dfs_update_ordering(c1->children[c1->children_processed].cell, s);
+    }
+    // Unflag the current cell as being processed.
+    c1->in_process = false;
+    // Add the current cell to the stack since all chlidren have been processed.
+    stack_push(s, c1);
+    c1->on_stack = true;
+}
+
 void set_cell_value(ROW row, COL col, char *text)
 {
+    // assert assumptions.
     assert(text != NULL);
     assert(row >= ROW_1 && row < NUM_ROWS);
     assert(col >= COL_A && col < NUM_COLS);
@@ -278,13 +288,13 @@ void set_cell_value(ROW row, COL col, char *text)
     c1->text_input = text;
     c1->text_input_len = strlen(text);
 
-    // Remove c1 from all its previous parents' children arrays.
+    // Reset c1's parents.
+    // Remove c1 from all its parents' children arrays.
     // Do this by moving the last child in each parent array into the position of the current cell, and decrementing the parent's num_children.
     // Then update the moved child's saved position in the parent's children array.
 
-    // c1_parents_indexOf_p.
-    size_t i;
-    for (i = 0; i < c1->num_parents; i++)
+    // i = c1_parents_indexOf_p.
+    for (size_t i = 0; i < c1->num_parents; i++)
     {
         // Parent cell that c1 is being removed from.
         cell_t *p = c1->parents[i].cell;
@@ -303,19 +313,16 @@ void set_cell_value(ROW row, COL col, char *text)
         // Update position of p in c2->parents.
         c2->parents[j].pos = p_children_indexOf_c1;
     }
-    // Set parents to zero since we removed c1 from all of their children arrays.
+    // Set num_parents to zero since we removed c1 from all of their children arrays.
     c1->num_parents = 0;
 
     // Update the cell with it's new text_input.
     // Save the old numeric value and type in case we need to update children.
-    number old_num = c1->num;
-    CELL_TYPE old_input_type = c1->input_type;
-    DATA_TYPE old_data_type = c1->data_type;
     // FORMULA
     if (*(c1->text_input) == '=')
     {
         c1->input_type = FORMULA;
-        cell_update_formula(c1);
+        cell_update_formula(c1, true);
     }
     // CONST
     else
@@ -328,40 +335,41 @@ void set_cell_value(ROW row, COL col, char *text)
             cell_update_display_num(c1);
         }
         // STRING
-        else if (c1->text_input_len > 0)
+        else
         {
             c1->data_type = STRING;
             snprintf(c1->text_display, CELL_DISPLAY_WIDTH + 1, c1->text_input);
         }
     }
 
-    // TODO: If the cell has changed and has children, update them.
-    if (c1->num_children > 0 && (old_input_type != c1->input_type || old_data_type != c1->data_type || old_num != c1->num))
+    // TODO: If the cell has children, perform updates.
+    if (c1->num_children > 0)
     {
-
-        // all cells should be flagged as not visited.
-        // all cells should be flagged as not on the stack.
-        // stack starts empty.
-        // dfs from c1:
-        //      if cell has already been added to the stack, then we can return true.
-        //      if the cell is flagged as being processed, then there is a circular dependency. return false.
-        //      Flag the current cell as being processed.
-        //      loop over children, call dfs on each child:
-        //          if a child return false exit the loop and return false. alternatively, could keep track of which children caused errors so we can display them to the user.
-        //      unflag the current cell as being processed.
-        //      if there were no circular dependencies, add the current cell to the stack. and mark current cell as on the stack. return true.
-        //      if there were circular dependencies, return false.
-        // if dfs returns false, then there was a circular dependency. set c1 to ERR:CIRC (or set the error to show which cells it is circularly referring to), clear the stack, and return.
-
-        // c1 was on the stack, so we can continue and update the children. start by popping c1 off the stack. since we updated it earlier on in this function, we don't need to update it again.
-        // This will result in the cells with no children being at the bottom of the stack, and the cells with the most children (direct descendents of c1) being at the top of the stack.
-
+        // stack to store pointers to cells in the order that they should be updated.
+        stack_t *s = stack_new(sizeof(cell_t *));
+        // This will result in the cells with no children (farthest descendents of c1) being at the bottom of the stack, and the cells with the most children (direct descendents of c1 and c1 itself) being at the top of the stack.
+        dfs_update_ordering(c1, s);
+        // This also flags any cells that are causing a circular dependency.
+        // Pointer for cell popped off the stack.
+        cell_t *out;
         // loop while the stack is not empty.
         // Pop of each cell from the stack and update it.
-        // This will result in such that as each cell is popped from the stack, all of it's parents have been popped already.
+        // This ordering is such that as each cell is popped from the stack, all of it's parents have been updated already.
+        while (stack_pop(s, &out))
+        {
+            out->on_stack = false;
+            // If there was no circular dependency, then update the cell by recalculating the formula.
+            if (!out->circular_dependency && out->input_type == FORMULA)
+                cell_update_formula(out, false);
+            // Update the display text in the interface.
+            update_cell_display(out->r, out->c, out->text_display);
+        }
+        // Free the stack.
+        stack_free(s);
     }
     // Update display text in the interface.
-    update_cell_display(row, col, c1->text_display);
+    else
+        update_cell_display(row, col, c1->text_display);
 }
 
 void clear_cell(ROW row, COL col)

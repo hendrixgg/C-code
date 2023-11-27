@@ -1,34 +1,36 @@
-#include <malloc.h>
-#include <assert.h>
-#include "stack.h"
+#include "stack.h" // Header file this implements.
+
+#include <stdlib.h> // for malloc, free, and realloc.
+#include <assert.h> // for assert.
+// #include <string.h> // for memcpy.
 
 struct stack
 {
     // Points to dynamically allocated array of size 'capacity', or is NULL if empty.
-    char *data;
+    cell_t **data;
     // The capacity of the array.
     size_t capacity;
     // The number of entries currently in the stack.
     size_t length;
 };
 
-stack_ptr stack_new()
+stack_t *stack_new()
 {
-    stack_ptr s = malloc(sizeof(struct stack));
+    stack_t *s = malloc(sizeof(struct stack));
     s->data = NULL;
     s->capacity = 0;
     s->length = 0;
     return s;
 }
 
-void stack_free(stack_ptr s)
+void stack_free(stack_t *s)
 {
     if (s->data != NULL)
         free(s->data);
     free(s);
 }
 
-void stack_push(stack_ptr s, char c)
+void stack_push(stack_t *s, cell_t *cell_ptr)
 {
     assert(s != NULL);
     // Check if already at capacity, allocate more memory if needed.
@@ -37,29 +39,29 @@ void stack_push(stack_ptr s, char c)
         // double the capacity
         s->capacity = s->capacity == 0 ? 1 : s->capacity << 1;
         // call realloc to store the larger amount of memory.
-        s->data = realloc(s->data, s->capacity * (sizeof(*s->data)));
+        s->data = realloc(s->data, s->capacity * sizeof(*s->data));
     }
-    // put the new character in the stack.
-    s->data[s->length++] = c;
+    // Put the new data in the stack. Will cause undefined behaviour if the data is not the correct size.
+    s->data[s->length++] = cell_ptr;
 }
 
-bool stack_pop(stack_ptr s, char *out)
+bool stack_pop(stack_t *s, cell_t **out)
 {
-    // TODO (task 2): how do we pop an entry from the stack?
     assert(s != NULL);
     // return false if there is no element to remove.
     if (s->length == 0)
         return false;
 
-    // assign the last element to the out variable. and decrement the length of the stack.
-    *out = s->data[--(s->length)];
+    // Copy the last element to the out variable. and decrement the length of the stack.
+    if (out != NULL)
+        *out = s->data[--s->length];
 
-    // realloc to less memory if the length has become a quarter of the capacity.
+    // realloc to half the memory if the length has become a quarter of the capacity.
     if (s->length < (s->capacity >> 2))
     {
         // half the capacity
         s->capacity >>= 1;
-        s->data = realloc(s->data, s->capacity * (sizeof(*s->data)));
+        s->data = realloc(s->data, s->capacity * sizeof(*s->data));
     }
     return true;
 }

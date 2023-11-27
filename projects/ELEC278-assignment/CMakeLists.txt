@@ -8,6 +8,9 @@ add_library(model OBJECT
         interface.h
         model.c
         model.h
+        # added stack from lab 3
+        stack.h
+        array-stack.c
 )
 
 add_executable(interactive
