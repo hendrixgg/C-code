@@ -342,7 +342,7 @@ void set_cell_value(ROW row, COL col, char *text)
         }
     }
 
-    // TODO: If the cell has children, perform updates.
+    // If the cell has children, perform updates.
     if (c1->num_children > 0)
     {
         // stack to store pointers to cells in the order that they should be updated.
