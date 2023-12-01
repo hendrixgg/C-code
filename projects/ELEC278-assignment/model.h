@@ -7,6 +7,11 @@
 #include <stdbool.h> // for bool.
 #include <stddef.h>  // for size_t.
 
+/*
+Reasons for already added flag (found in update_formula_cell):
+// If this is a repeated reference to the same parent, this code will add a duplicate parent of p in c1->parents and a duplicate child of c1 in p->children. This is not a breaking problem since we are duplicating in both directions here and deleting in both directions when set_cell_value is called. This inefficiency could be avoided by storing a flag on the parent cell for the duration of this function call to indicate that it has already been added as a parent of c1, then only adding a parent if that flag is false, then setting the flag to true once added as a parent. Finally, loop over parents of c1 and reset the flags to false before returning from the function. There is a trade-off between memory and speed here. If the same reference is included multiple times in the formula expression the current implementation is simpler but uses more memory when adding duplicate parents and incurs a slowdown when removing the duplicates in set_cell_value. The alternative implementation would likely end up using less memory overall (only storing an additional boolean flag compared to storing multiple duplicate pointers in the parents array) and would be slower when looping over parents to clear the flags at the end of the function call but would be faster when clearing parents in set_cell_value.
+*/
+
 // Classification of user input to a cell.
 typedef enum _CELL_TYPE
 {
@@ -71,6 +76,8 @@ struct _cell_t
     cell_pos_t children[NUM_ROWS * NUM_COLS];
     size_t num_children;
 
+    // A flag use to mark if the cell has already been added as a parent during the current formula update. Used to avoid duplicate parent-child relationships.
+    bool already_added;
     // A flag used to mark if the cell is currently in process for an update. Used to avoid a circular dependency.
     bool in_process;
     // A flag use to mark if the cell and all of it's children have been added to the stack.
