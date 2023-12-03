@@ -2,6 +2,10 @@
     "files.associations": {
         "ncurses.h": "c",
         "typeinfo": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "string.h": "c",
+        "limits.h": "c",
+        "math.h": "c",
+        "defs.h": "c"
     }
 }

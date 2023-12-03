@@ -34,7 +34,7 @@ void stack_free(stack_t *s);
 /**
  * Adds an entry to a stack.
  * @param s The stack to add to.
- * @param c The pointer to be stored on thr stack. This must be a pointer to an allocation of at least 'element_size' bytes.
+ * @param c The cell pointer to be stored on thr stack.
  */
 void stack_push(stack_t *s, cell_t *c);
 

@@ -15,6 +15,7 @@ int main()
 {
     memset(display, 0, sizeof(display));
     // Probaly going to need to call model_init() before running tests.
+    model_init();
     run_tests();
     return 0;
 }
@@ -26,6 +27,11 @@ void update_cell_display(ROW row, COL col, const char *text)
 
 void assert_display_text(ROW row, COL col, const char *text)
 {
+    if (strcmp(text, display[row][col]) != 0)
+    {
+        printf("Expected: %s\n", text);
+        printf("Actual: %s\n", display[row][col]);
+    }
     assert(strcmp(text, display[row][col]) == 0);
 }
 
