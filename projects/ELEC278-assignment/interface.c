@@ -140,6 +140,20 @@ int main()
     // Initialize data structure.
     model_init();
 
+    // TODO: test copied from tests.c
+    // Test FR4: When the value of a cell changes, the displayed contents of all formula cells which (directly or indirectly) depend on it are updated.
+    // populate cell A1 with a constant value.
+    // populate each other cell with a formula that references all the cells before it. This is the worst case scenario for updating cells. This is the most dependencies a cell and all of it's descendants can have without circular dependencies.
+    // set_cell_value(ROW_1, COL_A, strdup("1"));
+    // char formula[1024] = "=0";
+    // for (int i = 1; i < NUM_ROWS * NUM_COLS; i++)
+    // {
+    //     ROW r = i / NUM_COLS, prev_r = (i - 1) / NUM_COLS;
+    //     COL c = i % NUM_COLS, prev_c = (i - 1) % NUM_COLS;
+    //     snprintf(formula, 1024, "%s+%c%d", formula, prev_c + 'A', prev_r + 1); // +1 since ROW_1==0.
+    //     set_cell_value(r, c, strdup(formula));
+    // }
+
     // String of blanks used by main loop.
     char blanks[total_width + 1];
     for (size_t i = 0; i < total_width; i++)
