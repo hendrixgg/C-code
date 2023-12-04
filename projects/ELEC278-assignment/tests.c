@@ -1,14 +1,14 @@
-#include <string.h>
-#include <stdio.h>
+#include <string.h> // for strdup
+#include <stdio.h>  // for snprintf and printf
 #include <limits.h> // for CHAR_MAX
 #include <ctype.h>  // for isdigit
 #include <stdlib.h> // for rand and srand
 #include <time.h>   // for time
-#define CELL_EDIT_WIDTH 1000
 
-#include "model.h"
-#include "testrunner.h"
-#include "tests.h"
+#include "tests.h"      // implements this file
+#include "model.h"      // for set_cell_value
+#include "testrunner.h" // for assert_display_text and assert_edit_text
+#define CELL_EDIT_WIDTH 1024
 
 void run_tests()
 {
@@ -27,6 +27,7 @@ void run_tests()
     // Test the display text representation of a valid formula.
     assert_display_text(ROW_2, COL_C, strdup("4.7"));
     printf("4\n");
+    // Test that the value of a formula is updated when the cells it references are updated. THIS TESTS FR4
     set_cell_value(ROW_2, COL_B, strdup("3.1"));      // B2 = 3.1
     assert_display_text(ROW_2, COL_C, strdup("4.9")); // C2 = A2 + B2 + 0.4 = 1.4 + 3.1 + 0.4 = 4.9
     printf("5\n");
@@ -67,6 +68,7 @@ void run_tests()
     printf("FR1 Satisfied\n");
 
     // Test FR2.a: A value that starts with an equals sign (=) is always interpreted as a formula.
+    // Test that any character after the equals sign is interpreted as part of a formula.
     for (int c = 0; c < CHAR_MAX; c++)
     {
         char formula[5] = {'=', c, '\0', '\0', '\0'};
@@ -86,13 +88,14 @@ void run_tests()
     // FR2.b: A valid formula consists of one or more numbers of cell coordinates (e.g. B7) separated by addition signs (+). With the added feature of subtraction we can also have subtraction signs (-).
     // This was tested earlier on line 20 of this file.
     printf("FR2.b Satisfied\n");
+
     // FR2.c: A value which consists of one or more decimal digits (0 through 9) with at most one decimal point is interpreted as a number.
     // Test 100 random numbers.
     srand((unsigned int)time(NULL));
     for (int i = 0; i < 100; i++)
     {
         char input[CELL_EDIT_WIDTH + 1];
-        float number = ((float)rand() / (float)(RAND_MAX)) * 1000000.0f;
+        float number = ((float)rand() / (float)(RAND_MAX)) * 1e5f;
         snprintf(input, CELL_EDIT_WIDTH + 1, "%.3f", number); // simulate user putting 3 digits after the decimal point.
         sscanf(input, "%f", &number);                         // convert the string to a float.
         set_cell_value(ROW_2, COL_B, strdup(input));
@@ -101,6 +104,7 @@ void run_tests()
         printf("number worked: %.3f\n", number);
     }
     printf("FR2.c Satisfied\n");
+
     // FR2.d: A value which does not start with an equals sign and is not a number is interpreted as text.
     // Test 100 random strings.
     char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}\\|;:'\",<.>/?`~";
@@ -124,20 +128,18 @@ void run_tests()
     // Test FR3: When a user navigates to a cell, a textual representation of its value is shown in an editable field (i.e., the content field at the top of Excel’s interface), and the user can edit the value of the cell based on that representation. When the cell contains a formula, this should be a representation of the formula itself, not the computed value (which is shown in the cell itself).
     // This was tested earlier on in lines 25, 35, and 44 of this file.
     printf("FR3 Satisfied\n");
+
     // Test FR4: When the value of a cell changes, the displayed contents of all formula cells which (directly or indirectly) depend on it are updated.
     // This was tested earlier on in line 31 of this file. I will perform an additional tests here.
     // populate cell A1 with a constant value.
     set_cell_value(ROW_1, COL_A, strdup("1"));
-    // populate the first row a formula that references all the cells before it. This is the worst case scenario for updating cells. this is the most dependencies a cell and all of it's descendants can have without circular dependencies.
-    char formula[CELL_EDIT_WIDTH + 1] = "=0", prev_cell[5] = "+A1";
+    // populate each other cell with a formula that references all the cells before it. This is the worst case scenario for updating cells. This is the most dependencies a cell and all of it's descendants can have without circular dependencies.
+    char formula[CELL_EDIT_WIDTH] = "=0";
     for (int i = 1; i < NUM_ROWS * NUM_COLS; i++)
     {
         ROW r = i / NUM_COLS, prev_r = (i - 1) / NUM_COLS;
         COL c = i % NUM_COLS, prev_c = (i - 1) % NUM_COLS;
-        prev_cell[1] = prev_c + 'A';
-        snprintf(prev_cell + 2, 3, "%d", prev_r + 1); // +1 since row=0 is row_1.
-
-        strcat(formula, prev_cell);
+        snprintf(formula, CELL_EDIT_WIDTH, "%s+%c%d", formula, prev_c + 'A', prev_r + 1); // prev_r + 1 since ROW_1==0.
         set_cell_value(r, c, strdup(formula));
     }
     // Check that all the cells have the correct values.
@@ -179,7 +181,7 @@ void run_tests()
         assert_display_text(r, c, strdup("ERR:REFNAN"));
     }
     // Fix the error.
-    set_cell_value(ROW_1, COL_A, strdup("1"));
+    set_cell_value(ROW_1, COL_A, strdup("1.0"));
     assert_display_text(ROW_1, COL_A, strdup("1.0"));
     num = 1;
     for (int i = 1; i < NUM_ROWS * NUM_COLS; i++)
@@ -191,7 +193,7 @@ void run_tests()
         assert_display_text(r, c, strdup(expected));
         num *= 2;
     }
-    // Create the longest circular dependency possible.
+    // Create the longest chain of circular dependency possible.
     set_cell_value(ROW_1, COL_A, strdup("=G10")); // A1 = G10
     // Check that the errors are displayed correctly in all the cells.
     assert_display_text(ROW_1, COL_A, strdup("ERR:CIR:G10"));
@@ -202,7 +204,7 @@ void run_tests()
         assert_display_text(r, c, strdup("ERR:REFNAN"));
     }
     // Fix the error.
-    set_cell_value(ROW_1, COL_A, strdup("123")); // A1 = 123
+    set_cell_value(ROW_1, COL_A, strdup("123.0")); // A1 = 123
     // Ensure that all the cells have the correct values after fixing the error.
     assert_display_text(ROW_1, COL_A, strdup("123.0"));
     num = 123;
@@ -249,9 +251,9 @@ void run_tests()
         ROW r = i / NUM_COLS;
         COL c = i % NUM_COLS;
         char expected[CELL_DISPLAY_WIDTH + 1];
-        if (i < 3 * NUM_COLS + 2)
+        if (i < ROW_4 * NUM_COLS + COL_C)
             snprintf(expected, CELL_DISPLAY_WIDTH + 1, "%.1f", num);
-        else if (i == 3 * NUM_COLS + 2)
+        else if (i == ROW_4 * NUM_COLS + COL_C)
             snprintf(expected, CELL_DISPLAY_WIDTH + 1, "ERR:CIR:F8");
         else
             snprintf(expected, CELL_DISPLAY_WIDTH + 1, "ERR:REFNAN");

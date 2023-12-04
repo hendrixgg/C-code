@@ -6,7 +6,7 @@
 #include <string.h> // for size_t, NULL, strlen, strdup.
 #include <ctype.h>  // for isdigit and isalpha.
 #include <errno.h>  // for errno and ERANGE.
-#include <math.h>   // for isnan and isinf.
+#include <math.h>   // for isnan.
 #include <stdio.h>  // for snprintf.
 #include <assert.h> // for assert.
 
@@ -39,7 +39,7 @@ bool parse_number(const char *text, char **endptr, number *out)
     // Parse a float. This algorithm supoprts scientific notation.
     *out = strtof(text, endptr);
     // return whether the parsing was successful.
-    return *endptr != text && errno != ERANGE && !isinf(*out) && !isnan(*out);
+    return *endptr != text && errno != ERANGE && !isnan(*out);
 }
 
 /**
@@ -77,11 +77,11 @@ bool is_operator(char op)
 }
 
 /**
- * Updates the c1->num and c1->text_display by re-evaluating the formula stored in the cell's text_input. Optionally, updates the parent-child relationships if the input is new.
+ * Updates the c1->num and c1->text_display by re-evaluating the formula stored in c1->text_input. Optionally, updates the parent-child relationships if the input is new.
  *
- * Time Complexity: O(n) where n is the number of characters in the formula if new_input is false. if new_input is true, then the time complexity is O(n + m) where m is the number of parents of c1.
+ * Time Complexity: O(n) where n is the number of characters in the formula if new_input is false. if new_input is true, then the time complexity is O(n + m) where m is the number of parents c1 previously had.
  *
- * @param cell The cell to be computed based on it's text_input.
+ * @param cell The cell to be computed based on it's text_input. if `cell` or `cell->text_input` is NULL, then undefined behaviour occurs.
  * @param new_input A flag to indicate if the input is new. If true, then `c1->parents` will be cleared and new parent-child relationships will be created for each cell referenced in the formula. Otherwise, the existing parent-child relationships remain unchanged.
  */
 void update_cell(cell_t *c1, bool new_input)
@@ -122,7 +122,7 @@ void update_cell(cell_t *c1, bool new_input)
         c1->num_parents = 0;
     }
 
-    // CONST
+    // Handle a number or string.
     if (c1->text_input[0] != '=')
     {
         // if the input was the same as before, then we don't need to do anything since the cell is already up to date.

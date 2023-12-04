@@ -19,6 +19,7 @@ typedef struct stack stack_t;
 stack_t *stack_new();
 //  * @param element_size The number of bytes to store each element in the stack.
 
+// this is for if you want to store something other than a cell_t in the stack.
 /**
  * @param s The stack to query.
  * @return The number of bytes used to store each element in the stack.
