@@ -21,7 +21,7 @@ add_executable(testrunner
         testrunner.c
         testrunner.h
         tests.c
-        tests.h
+	tests.h
 )
 target_link_libraries(testrunner model)
 
