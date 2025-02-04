@@ -4,7 +4,7 @@
 
 /**
  * Parses an email address from the beginning of a string.
- * Email conforms to the regular expression: ^[a-zA-Z._-]*@[a-zA-Z]+.[a-zA-Z]+
+ * Email conforms to the regular expression: ^[a-zA-Z._-]*@[a-zA-Z]+\.[a-zA-Z]+
  * @param test_string The string to parse.
  * @return A pointer to the first character after the email address in the string. If no email address is found, the pointer will be the same as the input string.
  */
@@ -29,7 +29,7 @@ const char *parse_email_address(const char *const test_string)
     while (isalpha(*cp))
         cp++;
 
-    // Parse .
+    // Parse \.
     if (*cp == '.')
         cp++;
     else
