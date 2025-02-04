@@ -37,7 +37,7 @@ Noticing that the maximum length string in the above table is length 16.
 
 Formalization of the problem: design a DFA over the alphabet $\Sigma = \{a, b\}$ such that it recognizes the language $L$, where 
 
-$$L=\{w\in\Sigma^*| |w|\leq 16 \wedge |\text{(\# of a's in w)} - \text{(\# of b's in w)}|\leq 3\}$$
+$$L=\{w\in\Sigma^*| |w|\leq 16 \wedge |\text{(count of a's in w)} - \text{(count of b's in w)}|\leq 3\}$$
 
 See #reMarkable for drawing.
 ### (b)
