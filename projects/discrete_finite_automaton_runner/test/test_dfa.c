@@ -27,7 +27,7 @@ size_t dfa_transition_function(size_t state, char input)
         {1, 0},
         {2, 0},
         {2, 2}};
-    if (state < 3 && '0' <= input && input <= '1')
+    if (state < NUM_STATES && '0' <= input && input <= '1')
         return transition[state][input - '0'];
     return 3; // invalid state/input
 }
