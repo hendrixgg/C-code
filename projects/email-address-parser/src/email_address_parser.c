@@ -71,22 +71,22 @@ int main()
         NULL,
     };
     const char *const *test_email;
-    const char *next_char;
-    int success;
+    int success, parsed_length;
     // Test valid email addresses
     printf("Testing valid email addresses\n");
     for (test_email = valid_emails_to_test; *test_email != NULL; test_email++)
     {
-        next_char = parse_email_address(*test_email);
-        success = strlen(*test_email) == next_char - *test_email;
-        printf("%s: actual vs. parsed: \"%s\", \"%.*s\"\n", success ? "success" : "failure", *test_email, next_char - *test_email, *test_email);
+        parsed_length = parse_email_address(*test_email) - *test_email;
+        success = strlen(*test_email) == parsed_length;
+        printf("%s: actual vs. parsed: \"%s\", \"%.*s\"\n", success ? "success" : "failure", *test_email, parsed_length, *test_email);
     }
     // Test invalid email addresses
     printf("Testing invalid email addresses\n");
     for (test_email = invalid_emails_to_test; *test_email != NULL; test_email++)
     {
-        next_char = parse_email_address(*test_email);
-        success = strlen(*test_email) == next_char - *test_email;
-        printf("%s: actual vs. parsed: \"%s\", \"%.*s\"\n", success ? "success" : "failure", *test_email, next_char - *test_email, *test_email);
+        parsed_length = parse_email_address(*test_email) - *test_email;
+        success = strlen(*test_email) == parsed_length;
+        printf("%s: actual vs. parsed: \"%s\", \"%.*s\"\n", success ? "success" : "failure", *test_email, parsed_length, *test_email);
     }
+    return 0;
 }
