@@ -1,4 +1,6 @@
 # CISC/CMPE 223 Assignment 1 Problem 7
+Completed by Hendrix Gryspeerdt.
+
 ## Problem Statement
 ### (a)
 Design and draw a DFA over the alphabet {a, b} that accepts all strings (given in the table for question 7.c i.e., string length will not exceed the maximum length in the table) where the absolute difference between the number of a’s ($n_a$) and b’s ($n_b$) is at most 3, i.e., $|n_a − n_b| \leq 3$.
@@ -42,6 +44,15 @@ $$L=\{w\in\Sigma^*| |w|\leq 16 \wedge |\text{(count of a's in w)} - \text{(count
 See #reMarkable for drawing.
 ### (b)
 Implementation is defined in `dfa_implementation.c`.
+
+Compile the program:
+```
+gcc -o equal_as_and_bs src/dfa_implementation.c
+```
+Run the program:
+```
+./equal_as_and_bs.exe
+```
 ### (c)
 Results of testing the code on the input strings in the table:
 

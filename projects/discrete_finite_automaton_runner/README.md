@@ -1,4 +1,6 @@
 # CISC/CMPE 223 Assignment 1 Problem 8
+Completed by Hendrix Gryspeerdt.
+
 ## Problem Statemet
 Write a program (in C, C++, Java, or Python) that takes a finite automaton description (in the 5-tuple format) and a string as input, and determines whether the automaton accepts the string.
 
