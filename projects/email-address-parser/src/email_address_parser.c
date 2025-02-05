@@ -4,9 +4,9 @@
 
 /**
  * Parses an email address from the beginning of a string.
- * Email conforms to the regular expression: ^[a-zA-Z._-]*@[a-zA-Z]+\.[a-zA-Z]+$
+ * Email address conforms to the regular expression: ^[a-zA-Z._-]*@[a-zA-Z]+\.[a-zA-Z]+$
  * @param test_string The string to parse.
- * @return A pointer to the first character after the email address in the string. If no email address is found, the pointer will be the same as the input string.
+ * @return A pointer to the first character after the email address in the string. If no email address is found, then a NULL pointer is returned.
  */
 const char *parse_email_address(const char *const test_string)
 {
@@ -48,7 +48,7 @@ const char *parse_email_address(const char *const test_string)
     if (state)
         return cp;
     else
-        return test_string;
+        return NULL;
 }
 
 // Test the email address parser
@@ -75,12 +75,14 @@ int main()
         NULL,
     };
     const char *const *test_email;
+    const char *parse_result;
     int success, parsed_length;
     // Test valid email addresses
     printf("Testing valid email addresses\n");
     for (test_email = valid_emails_to_test; *test_email != NULL; test_email++)
     {
-        parsed_length = parse_email_address(*test_email) - *test_email;
+        parse_result = parse_email_address(*test_email);
+        parsed_length = parse_result == NULL ? 0 : parse_result - *test_email;
         success = strlen(*test_email) == parsed_length;
         printf("%s: actual vs. parsed: \"%s\", \"%.*s\"\n", success ? "success" : "failure", *test_email, parsed_length, *test_email);
     }
@@ -88,7 +90,8 @@ int main()
     printf("Testing invalid email addresses\n");
     for (test_email = invalid_emails_to_test; *test_email != NULL; test_email++)
     {
-        parsed_length = parse_email_address(*test_email) - *test_email;
+        parse_result = parse_email_address(*test_email);
+        parsed_length = parse_result == NULL ? 0 : parse_result - *test_email;
         success = strlen(*test_email) == parsed_length;
         printf("%s: actual vs. parsed: \"%s\", \"%.*s\"\n", success ? "success" : "failure", *test_email, parsed_length, *test_email);
     }
