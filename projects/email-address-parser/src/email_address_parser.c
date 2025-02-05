@@ -4,13 +4,14 @@
 
 /**
  * Parses an email address from the beginning of a string.
- * Email conforms to the regular expression: ^[a-zA-Z._-]*@[a-zA-Z]+\.[a-zA-Z]+
+ * Email conforms to the regular expression: ^[a-zA-Z._-]*@[a-zA-Z]+\.[a-zA-Z]+$
  * @param test_string The string to parse.
  * @return A pointer to the first character after the email address in the string. If no email address is found, the pointer will be the same as the input string.
  */
 const char *parse_email_address(const char *const test_string)
 {
     const char *cp = test_string;
+    int state = 1;
     // Parse [a-zA-Z._-]*
     while (isalpha(*cp) || *cp == '.' || *cp == '_' || *cp == '-')
         cp++;
@@ -18,13 +19,13 @@ const char *parse_email_address(const char *const test_string)
     if (*cp == '@')
         cp++;
     else
-        return test_string;
+        state = 0;
     // Parse [a-zA-Z]+
     //      Parse [a-zA-Z]
     if (isalpha(*cp))
         cp++;
     else
-        return test_string;
+        state = 0;
     //      Parse [a-zA-Z]*
     while (isalpha(*cp))
         cp++;
@@ -33,18 +34,21 @@ const char *parse_email_address(const char *const test_string)
     if (*cp == '.')
         cp++;
     else
-        return test_string;
+        state = 0;
 
     // Parse [a-zA-Z]+
     //      Parse [a-zA-Z]
     if (isalpha(*cp))
         cp++;
     else
-        return test_string;
+        state = 0;
     //      Parse [a-zA-Z]*
     while (isalpha(*cp))
         cp++;
-    return cp;
+    if (state)
+        return cp;
+    else
+        return test_string;
 }
 
 // Test the email address parser
