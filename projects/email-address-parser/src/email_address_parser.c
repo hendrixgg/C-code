@@ -1,54 +1,52 @@
 #include <stdio.h>
-#include <ctype.h>
 #include <string.h>
+#include <stdbool.h>
+
+#define evalIf(p, e) ((p) ? e : p)
+const char *parse_char(const char c, const char *cp)
+{
+    // return evalIf((*cp == c), cp + 1U);
+    return (const char *)((*cp == c) * ((size_t)cp + 1U));
+}
+const char *parse_char_pred(bool (*pred)(char), const char *cp)
+{
+    // return evalIf(pred(*cp), cp + 1U);
+    return (const char *)(pred(*cp) * ((size_t)cp + 1U));
+}
+const char *parse_char_star(bool (*pred)(char), const char *cp)
+{
+    while (pred(*cp))
+        cp++;
+    return cp;
+}
+const char *parse_char_plus(bool (*pred)(char), const char *cp)
+{
+    // return evalIf(pred(*cp), parse_char_star(cp + 1U, pred));
+    return (const char *)(pred(*cp) * (size_t)parse_char_star(pred, cp + 1));
+}
+static inline bool is_local_char(char c)
+{
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '.' || c == '_' || c == '-';
+}
+static inline bool is_domain_char(char c)
+{
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
 
 /**
  * Parses an email address from the beginning of a string.
  * Email address conforms to the regular expression: ^[a-zA-Z._-]*@[a-zA-Z]+\.[a-zA-Z]+$
- * @param test_string The string to parse.
+ * @param s The string to parse.
  * @return A pointer to the first character after the email address in the string. If no email address is found, then a NULL pointer is returned.
  */
-const char *parse_email_address(const char *const test_string)
+const char *parse_email_address(const char *cp)
 {
-    const char *cp = test_string;
-    int state = 1;
-    // Parse [a-zA-Z._-]*
-    while (isalpha(*cp) || *cp == '.' || *cp == '_' || *cp == '-')
-        cp++;
-    // Parse @
-    if (*cp == '@')
-        cp++;
-    else
-        state = 0;
-    // Parse [a-zA-Z]+
-    //      Parse [a-zA-Z]
-    if (isalpha(*cp))
-        cp++;
-    else
-        state = 0;
-    //      Parse [a-zA-Z]*
-    while (isalpha(*cp))
-        cp++;
-
-    // Parse \.
-    if (*cp == '.')
-        cp++;
-    else
-        state = 0;
-
-    // Parse [a-zA-Z]+
-    //      Parse [a-zA-Z]
-    if (isalpha(*cp))
-        cp++;
-    else
-        state = 0;
-    //      Parse [a-zA-Z]*
-    while (isalpha(*cp))
-        cp++;
-    if (state)
-        return cp;
-    else
-        return NULL;
+    cp = evalIf(cp, parse_char_star(is_local_char, cp));
+    cp = evalIf(cp, parse_char('@', cp));
+    cp = evalIf(cp, parse_char_plus(is_domain_char, cp));
+    cp = evalIf(cp, parse_char('.', cp));
+    cp = evalIf(cp, parse_char_plus(is_domain_char, cp));
+    return cp;
 }
 
 // Test the email address parser
