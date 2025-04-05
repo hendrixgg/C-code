@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     // Output everything from standard input in between the quotes.
     while((c = fgetc(stdin)) != EOF)
         fputc(c, stdout);
-    // Output the second double quote.
+    // Output the closing double quote.
     fputc(c_prev, stdout);
     // Output the rest of stuff from the file.
     while ((c = fgetc(f)) != EOF)
