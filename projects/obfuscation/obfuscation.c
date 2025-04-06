@@ -54,25 +54,17 @@ typedef struct __ObfuscatedType2 {
     struct __ObfuscatedType2 *o;
 } _ObfuscatedType2;
 
-typedef union {
-    _ObfuscatedType2 internal;
-    ObfuscatedType2 external;
-} Obfuscated2Union;
-
 ObfuscatedType2 obfuscation_ObfuscatedType2_default() {
+    _ObfuscatedType2 u2;
     assert(sizeof(ObfuscatedType2) == sizeof(_ObfuscatedType2));
 
-    Obfuscated2Union u = {
-        .internal = {
-            .d = 0.0,
-            .u = 0,
-            .o = malloc(sizeof(_ObfuscatedType2))
-        }
-    };
-    u.internal.o->d = 0.1;
-    u.internal.o->u = 1;
-    u.internal.o->o = NULL;
-    return u.external;
+    u2.d = 0.0;
+    u2.u = 0;
+    u2.o = malloc(sizeof(_ObfuscatedType2));
+    u2.o->d = 0.1;
+    u2.o->u = 1;
+    u2.o->o = NULL;
+    return *((ObfuscatedType2 *)&u2);
 }
 
 void obfuscation_ObfuscatedType2_init_default(ObfuscatedType2 *obfuscated) {
@@ -82,9 +74,10 @@ void obfuscation_ObfuscatedType2_init_default(ObfuscatedType2 *obfuscated) {
 }
 
 void obfuscation_ObfuscatedType2_free_internal(ObfuscatedType2 *obfuscated) {
+    _ObfuscatedType2 *ptr;
     assert(sizeof(ObfuscatedType2) == sizeof(_ObfuscatedType2));
 
-    _ObfuscatedType2 *ptr = (_ObfuscatedType2 *)obfuscated;
+    ptr = (_ObfuscatedType2 *)obfuscated;
     if (ptr->o != NULL) {
         obfuscation_ObfuscatedType2_free_internal((ObfuscatedType2 *)ptr->o);
     }
@@ -93,10 +86,12 @@ void obfuscation_ObfuscatedType2_free_internal(ObfuscatedType2 *obfuscated) {
 }
 
 void obfuscation_ObfuscatedType2_print(const ObfuscatedType2 obfuscated) {
-    assert(sizeof(ObfuscatedType2) == sizeof(_ObfuscatedType2));
+   _ObfuscatedType2 *ptr;
+    uint64_t count;
+   assert(sizeof(ObfuscatedType2) == sizeof(_ObfuscatedType2));
 
-    _ObfuscatedType2 *ptr = (_ObfuscatedType2 *)&obfuscated;
-    uint64_t count = 0;
+    ptr = (_ObfuscatedType2 *)&obfuscated;
+    count = 0;
     do {
         printf("ObfuscatedType2: d = %f, u = %u, o = {", ptr->d, ptr->u);
         ++count;
