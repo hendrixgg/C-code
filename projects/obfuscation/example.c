@@ -7,8 +7,12 @@
 // for loop that allocates memory to p
 // if malloc fails then the loop will exit without executing.
 // if malloc succeeds then the body will execute once, then free p and set it to NULL.
-// `break` statements in the body of the loop will ruin the guarantee that p is freed.
-#define MALLOC_FREE(p, size) for ((p) = malloc(size); p != NULL; free(p), (p) = NULL)
+// use a `continue` statement to break out of the loop early and free p.
+#define MALLOC_FREE_NULL(p, size) for ((p) = malloc(size); p != NULL; free(p), (p) = NULL)
+// similar to above but uses a flag to to break out of the loop after the first iteration and does not set p to NULL.
+int b_MALLOC_FREE;
+#define MALLOC_FREE(p, size) for ((p) = malloc(size), b_MALLOC_FREE = 1; b_MALLOC_FREE; free(p), b_MALLOC_FREE = 0)
+
 
 int main(int argc, char *argv[]) {
     if (argc > 0)
@@ -16,10 +20,12 @@ int main(int argc, char *argv[]) {
 
     ObfuscatedType1 *obf1;
     MALLOC_FREE(obf1, sizeof_ObfuscatedType1) {
+    // MALLOC_FREE_NULL(obf1, sizeof_ObfuscatedType1) {
         obfuscation_ObfuscatedType1_init(obf1);
         obfuscation_ObfuscatedType1_print(obf1);
         obfuscation_ObfuscatedType1_free_internal(obf1);   
     }
+    printf("\n%p\n", (void *)obf1);
 
     printf("\n");
 
