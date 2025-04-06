@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "obfuscation.h"
 
@@ -29,6 +30,7 @@ int main(int argc, char *argv[]) {
 
     printf("\n");
 
+    memset(&obf2, 0, sizeof(ObfuscatedType2));
     obf2 = obfuscation_ObfuscatedType2_default();
     obfuscation_ObfuscatedType2_print(obf2);
     obfuscation_ObfuscatedType2_free_internal(&obf2);
