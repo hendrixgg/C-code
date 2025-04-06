@@ -3,7 +3,7 @@
 
 #include "obfuscation.h"
 
-#define MALLOC_FREE(p, size) for (p = malloc(size); p != NULL; free(p), p = NULL)
+#define MALLOC_FREE(p, size) for ((p) = malloc(size); p != NULL; free(p), (p) = NULL)
 
 int main(int argc, char *argv[]) {
     if (argc > 0)
