@@ -9,9 +9,10 @@
 // if malloc succeeds then the body will execute once, then free p and set it to NULL.
 // use a `continue` statement to break out of the loop early and free p.
 #define MALLOC_FREE_NULL(p, size) for ((p) = malloc(size); p != NULL; free(p), (p) = NULL)
+// DO NOT USE THIS VARIABLE, it is only used to break out of the MALLOC_FREE loop.
+int __b_MALLOC_FREE;
 // similar to above but uses a flag to to break out of the loop after the first iteration and does not set p to NULL.
-int b_MALLOC_FREE;
-#define MALLOC_FREE(p, size) for ((p) = malloc(size), b_MALLOC_FREE = 1; b_MALLOC_FREE; free(p), b_MALLOC_FREE = 0)
+#define MALLOC_FREE(p, size) for ((p) = malloc(size), __b_MALLOC_FREE = 1; __b_MALLOC_FREE; free(p), __b_MALLOC_FREE = 0)
 
 
 int main(int argc, char *argv[]) {
