@@ -3,6 +3,10 @@
 
 #include "obfuscation.h"
 
+// for loop that allocates memory to p
+// if malloc fails then the loop will exit without executing.
+// if malloc succeeds then the body will execute once, then free p and set it to NULL.
+// `break` statements in the body of the loop will ruin the guarantee that p is freed.
 #define MALLOC_FREE(p, size) for ((p) = malloc(size); p != NULL; free(p), (p) = NULL)
 
 int main(int argc, char *argv[]) {
